@@ -23,6 +23,7 @@ from knowledge import get_lexical_relations
 from nltk2coq import normalize_interpretation
 from semantic_types import get_dynamic_library_from_doc
 from tactics import get_tactics
+from theorem import Theorem
 
 def build_knowledge_axioms(doc):
     if not doc:
@@ -63,8 +64,40 @@ def prove_doc(doc, abduction=None):
     if not formulas:
         return 'unknown', coq_scripts
     dynamic_library_str = get_dynamic_library_from_doc(doc, formulas)
-
     premises, conclusion = formulas[:-1], formulas[-1]
+    theorem = Theorem(premises, conclusion, dynamic_library_str)
+
+    inference_result, coq_script = theorem.run(axioms=set(), expected='yes')
+    coq_scripts.append(coq_script)
+    if inference_result == 'yes':
+        inference_result_str = 'yes'
+    else:
+        inference_result, coq_script = theorem.run(axioms=set(), expected='no')
+        coq_scripts.append(coq_script)
+        if inference_result == 'no':
+            inference_result_str = 'no'
+        else:
+            inference_result_str = 'unknown'
+    if abduction and inference_result_str == 'unknown':
+        inference_result_str, abduction_scripts = \
+            abduction.attempt(theorem.coq_scripts, doc)
+        coq_scripts.extend(abduction_scripts)
+    return inference_result_str, coq_scripts
+
+def prove_doc_(doc, abduction=None):
+    """
+    Retrieve from trees the logical formulas and the types
+    (dynamic library).
+    Then build a prover script and retrieve entailment judgement.
+    If results are not conclusive, attempt basic abduction.
+    """
+    coq_scripts = []
+    formulas = get_formulas_from_doc(doc)
+    if not formulas:
+        return 'unknown', coq_scripts
+    dynamic_library_str = get_dynamic_library_from_doc(doc, formulas)
+    premises, conclusion = formulas[:-1], formulas[-1]
+
     inference_result, coq_script = \
         prove_statements(premises, conclusion, dynamic_library_str)
     coq_scripts.append(coq_script)
@@ -84,14 +117,6 @@ def prove_doc(doc, abduction=None):
             abduction.attempt(coq_scripts, doc)
         coq_scripts.extend(abduction_scripts)
     return inference_result_str, coq_scripts
-
-# Check whether the string "is defined" appears in the output of coq.
-# In that case, we return True. Otherwise, we return False.
-def is_theorem_defined(output_lines):
-    for output_line in output_lines:
-        if len(output_line) > 2 and 'is defined' in (' '.join(output_line[-2:])):
-            return True
-    return False
 
 def resolve_prefix_to_infix_operations(expr_str, pred = 'R', symbol = '', brackets = ['', '']):
     cat_expr_str = expr_str

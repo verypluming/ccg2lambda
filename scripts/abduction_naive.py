@@ -6,7 +6,8 @@ import subprocess
 
 from abduction_tools import InsertAxiomsInCoqScript
 from knowledge import get_tokens_from_xml_node, GetLexicalRelationsFromPreds
-from semantic_tools import is_theorem_defined
+from theorem import is_theorem_defined
+from theorem import InsertAxiomsInCoqScript
 
 class AxiomsWordnet(object):
     """

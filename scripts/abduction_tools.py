@@ -9,7 +9,7 @@ import subprocess
 from nltk import Tree
 
 from knowledge import GetLexicalRelationsFromPreds
-from semantic_tools import is_theorem_defined
+from theorem import is_theorem_defined, InsertAxiomsInCoqScript
 from tactics import get_tactics
 
 # Check whether the string "is defined" appears in the output of coq.
@@ -173,23 +173,6 @@ def MakeAxiomsFromPreds(premise_preds, conclusion_pred, pred_args):
   #   approx_axioms = GetApproxRelationsFromPreds(premise_preds, conclusion_pred)
   #   axioms.update(approx_axioms)
   return axioms
-
-def GetTheoremLine(coq_script_lines):
-  for i, line in enumerate(coq_script_lines):
-    if line.startswith('Theorem '):
-      return i
-  assert False, 'There was no theorem defined in the coq script: {0}'\
-    .format('\n'.join(coq_script_lines))
-
-def InsertAxiomsInCoqScript(axioms, coq_script):
-  coq_script_lines = coq_script.split('\n')
-  theorem_line = GetTheoremLine(coq_script_lines)
-  for axiom in axioms:
-    axiom_name = axiom.split()[1]
-    coq_script_lines.insert(theorem_line, 'Hint Resolve {0}.'.format(axiom_name))
-    coq_script_lines.insert(theorem_line, axiom)
-  new_coq_script = '\n'.join(coq_script_lines)
-  return new_coq_script
 
 def TryAbductions_(coq_scripts):
   assert len(coq_scripts) == 2
