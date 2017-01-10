@@ -18,9 +18,16 @@ import codecs
 import logging
 from subprocess import Popen
 import subprocess
+import time
 
 from nltk2coq import normalize_interpretation
 from tactics import get_tactics
+
+class ProofResult(object):
+    def __init__(self, judgment, script, output_lines):
+        self.judgment = judgment
+        self.script = script
+        self.output_lines = output_lines
 
 class Theorem(object):
     """
@@ -40,9 +47,10 @@ class Theorem(object):
         self.coq_scripts = []
         # Axioms:
         self.axioms = set()
+        self.saturated_axioms_direct = False
+        self.saturated_axioms_reverse = False
         # Statistics of execution:
         self.num_execs = 0
-        self.acc_execs_time = 0.0
         self.execs_time = []
 
     def build_script(self, premises, conclusion, library):
@@ -55,21 +63,59 @@ class Theorem(object):
         coq_script = substitute_invalid_chars(coq_script, 'replacement.txt')
         return coq_script
 
-    def run(self, axioms, expected='yes'):
+    def get_accumulated_exec_time(self):
+        return sum(self.execs_time)
+
+    def get_directional_script(self, expected='yes'):
         coq_script = self.coq_script_direct
         if expected == 'no':
             coq_script = self.coq_script_reverse
+        return coq_script
+
+    def is_axiom_saturated(self):
+        return self.saturated_axioms_direct and self.saturated_axioms_reverse
+
+    def set_axiom_saturation(self, axioms, expected):
+        if self.axioms.union(set(axioms)) == self.axioms:
+            if expected == 'yes':
+                self.saturated_axioms_direct = True
+            if expected == 'no':
+                self.saturated_axioms_reverse = True
+        else:
+            self.saturated_axioms_direct = False
+            self.saturated_axioms_reverse = False
+
+    def run(self, axioms, expected='yes', debug=False):
+        """
+        When we are in debug mode:
+        * Replace tactics by debugging tactics to monitor proof.
+        * Do not save the script nor the axioms nor the execution times.
+        * Do not count the execution as a new execution.
+        """
+        self.set_axiom_saturation(axioms, expected)
+        coq_script = self.get_directional_script(expected)
         augmented_script = InsertAxiomsInCoqScript(axioms, coq_script)
-        self.coq_scripts.append(augmented_script)
-        self.axioms.update(set(axioms))
+        if debug:
+            debug_tactics = 'repeat nltac_base. try substitution. Qed'
+            coq_script_debug = augmented_script.replace(self.tactics, debug_tactics)
+        else:
+            self.coq_scripts.append(augmented_script)
+            self.axioms.update(set(axioms))
+            t_start = time.time()
         process = Popen(augmented_script, shell=True, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output_lines = [
             line.decode('utf-8').strip() for line in process.stdout.readlines()]
+        if not debug:
+            exec_time = time.time() - t_start
+            self.execs_time.append(exec_time)
+            self.num_execs += 1
         if is_theorem_defined(l.split() for l in output_lines):
-            return expected, augmented_script
+            judgment = expected
         else:
-            return None, augmented_script
+            judgment = None
+        result = ProofResult(expected, augmented_script, output_lines)
+        return result
 
 # Given a string reprsenting the logical interpretation of the conclusion,
 # it returns a string with the negated conclusion.

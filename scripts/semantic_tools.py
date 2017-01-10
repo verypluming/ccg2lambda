@@ -67,14 +67,14 @@ def prove_doc(doc, abduction=None):
     premises, conclusion = formulas[:-1], formulas[-1]
     theorem = Theorem(premises, conclusion, dynamic_library_str)
 
-    inference_result, coq_script = theorem.run(axioms=set(), expected='yes')
-    coq_scripts.append(coq_script)
-    if inference_result == 'yes':
+    result = theorem.run(axioms=set(), expected='yes')
+    coq_scripts.append(result.script)
+    if result.judgment == 'yes':
         inference_result_str = 'yes'
     else:
-        inference_result, coq_script = theorem.run(axioms=set(), expected='no')
-        coq_scripts.append(coq_script)
-        if inference_result == 'no':
+        result = theorem.run(axioms=set(), expected='no')
+        coq_scripts.append(result.script)
+        if result.judgment == 'no':
             inference_result_str = 'no'
         else:
             inference_result_str = 'unknown'

@@ -189,26 +189,22 @@ def TryAbductions_(coq_scripts):
   all_scripts = direct_proof_scripts + reverse_proof_scripts
   return inference_result_str, all_scripts
 
-def TryAbductions(coq_scripts):
-  assert len(coq_scripts) == 2
-  direct_proof_script = coq_scripts[0]
-  reverse_proof_script = coq_scripts[1]
-  axioms = set()
+def TryAbductions(theorem):
   # from pudb import set_trace; set_trace()
-  while True:
-    inference_result_str, direct_proof_scripts, new_direct_axioms = \
-      TryAbduction(direct_proof_script, previous_axioms=axioms, expected='yes')
-    current_axioms = axioms.union(new_direct_axioms)
-    reverse_proof_scripts = []
-    if not inference_result_str == 'yes':
-      inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-        TryAbduction(reverse_proof_script, previous_axioms=current_axioms, expected='no')
-      current_axioms.update(new_reverse_axioms)
-    all_scripts = direct_proof_scripts + reverse_proof_scripts
-    if len(axioms) == len(current_axioms) or inference_result_str != 'unknown':
+  axioms = set()
+  inference_result_str = 'unknown'
+  while not theorem.is_axiom_saturated():
+    result, theorem = \
+      TryAbduction(theorem, previous_axioms=axioms, expected='yes')
+    current_axioms = axioms.union(theorem.axioms)
+    if result.judgment != 'yes':
+      result, theorem = \
+        TryAbduction(theorem, previous_axioms=current_axioms, expected='no')
+      current_axioms.update(theorem.axioms)
+    if result.judgment != 'unknown':
       break
     axioms = current_axioms
-  return inference_result_str, all_scripts
+  return result.judgment, theorem.coq_scripts
 
 def filter_wrong_axioms(axioms, coq_script):
   good_axioms = set()
@@ -223,7 +219,23 @@ def filter_wrong_axioms(axioms, coq_script):
       good_axioms.add(axiom)
   return good_axioms
 
-def TryAbduction(coq_script, previous_axioms=set(), expected='yes'):
+def TryAbduction(theorem, previous_axioms=set(), expected='yes'):
+  result = theorem.run(previous_axioms, expected, debug=True)
+  if result.judgment == expected:
+      return expected, [result.script], theorem.axioms
+  premise_lines = GetPremiseLines(theorem.output_lines)
+  conclusion = GetConclusionLine(theorem.output_lines)
+  if not premise_lines or not conclusion:
+    return 'unknown', [], theorem.axioms
+  matching_premises = GetPremisesThatMatchConclusionArgs(premise_lines, conclusion)
+  axioms = MakeAxiomsFromPremisesAndConclusion(premise_lines, conclusion)
+  coq_script = theorem.get_directional_script(expected)
+  axioms = filter_wrong_axioms(axioms, coq_script) # perhaps should do in Theorem.
+  result = theorem.run(axioms, expected)
+  if result.judgment == expected:
+      return result, theorem
+
+def TryAbduction_(coq_script, previous_axioms=set(), expected='yes'):
   new_coq_script = InsertAxiomsInCoqScript(previous_axioms, coq_script)
   current_tactics = get_tactics()
   debug_tactics = 'repeat nltac_base. try substitution. Qed'
