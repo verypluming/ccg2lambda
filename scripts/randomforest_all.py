@@ -136,6 +136,16 @@ def get_features(line):
         float(line[33]),
         float(line[34]),
         float(line[35]),
+        float(line[36]), # add origin Subj, Acc, Dat subgoals 
+        float(line[37]),
+        float(line[38]),
+        float(line[39]),
+        float(line[40]),
+        float(line[41]),
+        float(line[42]), # add relation subgoals
+        float(line[43]),
+        float(line[44]),
+        float(line[45]),
         float(feature_extraction.get_overlap(sentence1_list, sentence2_list)),                 #36 word overlap
         float(feature_extraction.sentence_lengths(sentence1_list, sentence2_list)),            #37 sentence length
         float(difflib.SequenceMatcher(None, line[2], line[3]).ratio()),                        #38 string similarity

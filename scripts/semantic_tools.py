@@ -359,8 +359,8 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         if re.search('^[0-9]* subgoals?$', o):
             delete_subgoals = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
             break
-    line_index_last_conclusion_sep = FindFinalConclusionSepLineIndex(output_lines)
-    line_index_subgoal_sep = FindFinalSubgoalLineIndex(output_lines)
+    line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(output_lines)
+    line_index_subgoal_sep = find_final_subgoal_line_index(output_lines)
 
     for line in output_lines[line_index_subgoal_sep:line_index_last_conclusion_sep]:
         # only count Hxx as premises and not count 'True' 2016/12/20
@@ -500,8 +500,8 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         if re.search('^[0-9]* subgoals?$', o):
             origin_delete_subgoals = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
             break
-    line_index_last_conclusion_sep2 = FindFinalConclusionSepLineIndex(output_lines)
-    line_index_subgoal_sep2 = FindFinalSubgoalLineIndex(output_lines)
+    line_index_last_conclusion_sep2 = find_final_conclusion_sep_line_index(output_lines)
+    line_index_subgoal_sep2 = find_final_subgoal_line_index(output_lines)
     for line in output_lines[line_index_subgoal_sep2:line_index_last_conclusion_sep2]:
         ## only count Hxx and not count 'True' 2016/12/20
         if re.search(r'^[H]', line) and not 'True' in line:
