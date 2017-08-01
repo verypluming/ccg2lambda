@@ -131,8 +131,10 @@ def create_copy_axioms(relations_to_pairs, relation='copy'):
         axioms.append(axiom)
     return axioms
 
-def get_approx_relations_from_preds(premise_preds, conclusion_pred, threshold=0.3):
+def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, threshold=0.3):
     #threshold is default=0.8, in paper=0.4, for similarity=0
+    if pred_args is None:
+        pred_args = defaultdict(lambda: ['x'])
     src_preds = [denormalize_token(p) for p in premise_preds]
     trg_pred = denormalize_token(conclusion_pred)
     approx_simil = []
@@ -164,8 +166,19 @@ def get_approx_relations_from_preds(premise_preds, conclusion_pred, threshold=0.
     if approx_simil_sorted[0][0] < threshold:
         return []
     best_pred = approx_simil_sorted[0][1]
-    axioms = ['Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
-        .format('approx', best_pred, trg_pred)]
+    best_args = pred_args.get('_' + best_pred, None)
+    trg_args = pred_args.get('_' + trg_pred, None)
+    str_trg_args = ' '.join(trg_args)
+    if re.search("\?", str_trg_args):
+        #if existential variables exists, assume premise's argument as subgoal's argument
+        trg_args = best_args
+        longest_args = best_args
+    else:
+        longest_args = best_args if len(best_args) >= len(trg_args) else trg_args
+    #axioms = ['Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
+    #          .format('approx', best_pred, trg_pred)]
+    axioms = ['Axiom ax_{0}_{1}_{2} : forall {3}, _{1} {4} -> _{2} {5}.'\
+        .format('approx', best_pred, trg_pred, ' '.join(longest_args), ' '.join(best_args), ' '.join(trg_args))]
 
     return axioms
 

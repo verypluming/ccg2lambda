@@ -79,7 +79,9 @@ def prove_doc(doc, abduction=None, similarity=None):
         origin_subgoals_similarity1, origin_subgoals_similarity2 = 0, 0
         steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1 = 0, 0, 0, 0, 0, 0, 0, 0
         steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2 = 0, 0, 0, 0, 0, 0, 0, 0
-        subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2 = 0, 0, 0, 0, 0, 0 
+        subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2 = 0, 0, 0, 0, 0, 0
+        ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2 = 0, 0, 0, 0, 0, 0
+        relation_subgoals1, relation_subgoals2, origin_relation_subgoals1, origin_relation_subgoals2 = 0, 0, 0, 0 
 
         ## prove A->B
         inference_result, coq_script = \
@@ -87,7 +89,8 @@ def prove_doc(doc, abduction=None, similarity=None):
         coq_scripts.append(coq_script)
         if inference_result:
             inference_result_int1 = 1
-            axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1, subj_subgoals1, acc_subgoals1, dat_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+            axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
+            subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
             word_similarity1, subgoals_similarity1, origin_subgoals_similarity1 = 1, 1, 1
         else:
             negated_conclusion = negate_conclusion(conclusion)
@@ -96,7 +99,8 @@ def prove_doc(doc, abduction=None, similarity=None):
             coq_scripts.append(coq_script)
             if inference_result:
                 inference_result_int1 = 0.5
-                axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1, subj_subgoals1, acc_subgoals1, dat_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+                axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
+                subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
                 word_similarity1, subgoals_similarity1, origin_subgoals_similarity1 = 1, 1, 1
             else:
                 ## try abductions
@@ -104,17 +108,19 @@ def prove_doc(doc, abduction=None, similarity=None):
                 coq_scripts.extend(abduction_scripts)
                 if inference_result_str == 'yes':
                     inference_result_int1 = 1
-                    axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1, subj_subgoals1, acc_subgoals1, dat_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+                    axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
+                    subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
                 elif inference_result_str == 'no':
                     inference_result_int1 = 0.5
-                    axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1, subj_subgoals1, acc_subgoals1, dat_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+                    axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
+                    subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
                 else:
                     ## reduce subgoals
                     inference_result_str, new_abduction_scripts = try_reduce_subgoals(coq_scripts)
                     coq_scripts.extend(new_abduction_scripts)
                     if inference_result_str == 'yes':
-                        axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1, subj_subgoals1, acc_subgoals1, dat_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
-                    #elif inference_result_str == 'coq_error':
+                        axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
+                        subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)                    #elif inference_result_str == 'coq_error':
                     else:
                         return inference_result_str, coq_scripts
         ## prove B->A
@@ -124,7 +130,8 @@ def prove_doc(doc, abduction=None, similarity=None):
         coq_scripts2.append(coq_script)
         if inference_result:
             inference_result_int2 = 1
-            axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2, subj_subgoals2, acc_subgoals2, dat_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+            axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
+            subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
             word_similarity2, subgoals_similarity2, origin_subgoals_similarity2 = 1, 1, 1
         else:
             negated_conclusion = negate_conclusion(conclusion)
@@ -135,7 +142,8 @@ def prove_doc(doc, abduction=None, similarity=None):
             if inference_result:
                 #contradiction is mostly similar
                 inference_result_int2 = 0.5
-                axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2, subj_subgoals2, acc_subgoals2, dat_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
+                subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
                 word_similarity2, subgoals_similarity2, origin_subgoals_similarity2 = 1, 1, 1
             else:
                 ## try abductions
@@ -144,17 +152,20 @@ def prove_doc(doc, abduction=None, similarity=None):
                 coq_scripts2.extend(abduction_scripts)
                 if inference_result_str == 'yes':
                     inference_result_int2 = 1
-                    axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2, subj_subgoals2, acc_subgoals2, dat_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                    axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
+                    subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
                 elif inference_result_str == 'no':
                     inference_result_int2 = 0.5
-                    axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2, subj_subgoals2, acc_subgoals2, dat_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                    axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
+                    subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
                 else:
                     ## reduce subgoals
                     inference_result_str, new_abduction_scripts = try_reduce_subgoals(coq_scripts2)
                     coq_scripts.extend(new_abduction_scripts)
                     coq_scripts2.extend(new_abduction_scripts)
                     if inference_result_str == 'yes':
-                        axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2, subj_subgoals2, acc_subgoals2, dat_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                        axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
+                        subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
                     else:
                         return inference_result_str, coq_scripts
         return [inference_result_int1, word_similarity1, axioms1, subgoals_similarity1,\
@@ -162,7 +173,9 @@ def prove_doc(doc, abduction=None, similarity=None):
         origin_subgoals_similarity1, origin_subgoals_similarity2,\
         steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
         steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
-        subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2\
+        subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2,\
+        ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2,\
+        relation_subgoals1, relation_subgoals2, origin_relation_subgoals1, origin_relation_subgoals2\
         ], coq_scripts
 
     else:    
@@ -260,213 +273,274 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     word1 = ""
     word2 = ""
     word_similarity = 0
-    originsubgoals = 0
-    deletesubgoals = 0
-    originsubgoals2 = 0
-    deletesubgoals2 = 0
+    premises, delete_subgoals, per_delete_subgoals = 0, 0, 0
+    origin_premises, origin_delete_subgoals, per_origin_delete_subgoals = 0, 0, 0
     axioms = 0
     origin_coq_scripts = ""
     # count steps and inference_rules
     steps = 0
-    subgoal_flg = 0
-    subgoals = []
+    subgoal_flg, origin_subgoal_flg = 0, 0
+    subgoals, origin_subgoals = [], []
     assertnums = 0
     admit_command1 = ""
     admit_command2 = ""
     ex_ind, and_ind, eq_ind, conj, ex_intro, fun, fun_ind = 0, 0, 0, 0, 0, 0, 0
     # arguments' case of subgoals
-    subj_subgoals, acc_subgoals, dat_subgoals = 0, 0, 0
+    subj_subgoals, acc_subgoals, dat_subgoals, origin_subj_subgoals, origin_acc_subgoals, origin_dat_subgoals = 0, 0, 0, 0, 0, 0
     merge_axioms = defaultdict(list)
+    assertaxioms = {}
+    typeinfo = {}
+    relation_subgoals, per_relation_subgoals, origin_relation_subgoals, per_origin_relation_subgoals  = 0, 0, 0, 0
 
     # use last coq_scripts
     coq_lines = coq_scripts[-1].split("\n")
     for coq_line in coq_lines:
-      if re.search("Hint", coq_line):
-        if re.search("approx", coq_line):
-          #word2vec
-          word_lines = coq_line.split("_")
-          word1 = word_lines[2]
-          if re.search("(.*)\.", word_lines[3]):
-            word2 = word_lines[3].rstrip(".")
-          else:
-            word2 = word_lines[3]
-          merge_axioms[word1].append("w2v "+word2)
-        elif re.search("ax_copy", coq_line) or re.search("ax_remove", coq_line) or re.search("ax_phrase", coq_line):
-           #phrase level = calculate similarity as 1
-           continue
-        else:
-          #wordnet  
-          word_lines = coq_line.split("_")
-          word1 = word_lines[2]
-          word2 = re.search("(.*)\.", word_lines[3]).group(1)
-          merge_axioms[word1].append("wn "+word2)
+        if re.search("Hint", coq_line):
+            if re.search("approx", coq_line):
+                #word2vec
+                word_lines = coq_line.split("_")
+                word1 = word_lines[2]
+                if re.search("(.*)\.", word_lines[3]):
+                    word2 = word_lines[3].rstrip(".")
+                else:
+                    word2 = word_lines[3]
+                merge_axioms[word1].append("w2v "+word2)
+            elif re.search("ax_copy", coq_line) or re.search("ax_remove", coq_line) or re.search("ax_phrase", coq_line):
+                #copy, phrase level = calculate similarity as 1
+                continue
+            else:
+                #wordnet  
+                word_lines = coq_line.split("_")
+                word1 = word_lines[2]
+                word2 = re.search("(.*)\.", word_lines[3]).group(1)
+                merge_axioms[word1].append("wn "+word2)
+        if re.search("Parameter", coq_line):
+            #use for skipping subgoals with existential variables
+            coq_elements = coq_line.split()
+            typeinfo[coq_elements[1]] = coq_elements[3]
 
+    #calculate axiom similarity
     for pr, ax in merge_axioms.items():
-      pre_similarities = []
-      for a in ax:
-        dic = a.split()[0]
-        word = a.split()[1]
-        if dic == "w2v":
-          if unicodedata.category(pr[0]) == "Lo":
-            #if Japanese, do URL encode
-            pr = urllib.parse.quote(pr)
-            word = urllib.parse.quote(word)
-          process = Popen(\
-            'curl http://localhost:5000/word2vec/similarity?w1='+ pr +'\&w2='+ word, \
-            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-          pre_similarity = process.communicate()[0]
-          pre_similarities.append(float(pre_similarity.decode()))
-        elif dic == "wn":
-          pre_similarity = wordnet_similarity(pr, word)
-          pre_similarities.append(pre_similarity)
-      word_similarity += max(pre_similarities)
-      axioms += 1
-
+        pre_similarities = []
+        for a in ax:
+            dic = a.split()[0]
+            word = a.split()[1]
+            if dic == "w2v":
+                if unicodedata.category(pr[0]) == "Lo":
+                    #if Japanese, do URL encode
+                    pr = urllib.parse.quote(pr)
+                    word = urllib.parse.quote(word)
+                process = Popen(\
+                'curl http://localhost:5000/word2vec/similarity?w1='+ pr +'\&w2='+ word, \
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                pre_similarity = process.communicate()[0]
+                pre_similarities.append(float(pre_similarity.decode()))
+            elif dic == "wn":
+                pre_similarity = WordNetSimilarity(pr, word)
+                pre_similarities.append(pre_similarity)
+        word_similarity += max(pre_similarities)
+        axioms += 1
     if axioms > 0:
-      word_similarity = word_similarity/axioms
+        word_similarity = word_similarity/axioms
 
+    # extract final subgoals from coq_scripts and calculate subgoal
     new_coq_scripts = coq_scripts[-1].replace(
-      'nltac. Set Firstorder Depth 3. nltac',
-      'nltac. Set Firstorder Depth 3. repeat nltac_base.')
+        'nltac. Set Firstorder Depth 3. nltac',
+        'nltac. Set Firstorder Depth 3. repeat nltac_base.')
     process = Popen(\
-      new_coq_scripts, \
-      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        new_coq_scripts, \
+        shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
     for o in output_lines:
-      # add "focused" for new Coq's script
-      if re.search('^[0-9]* focused subgoals?$', o):
-        deletesubgoals = int(re.search(r'^([0-9]*) focused subgoals?$', o).group(1))
-        break
-      if re.search('^[0-9]* subgoals?$', o):
-        deletesubgoals = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
-        break
-    line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(output_lines)
-    line_index_subgoal_sep = find_final_subgoal_line_index(output_lines)
+        # add "focused" for new Coq's version
+        if re.search('^[0-9]* focused subgoals?$', o):
+            delete_subgoals = int(re.search(r'^([0-9]*) focused subgoals?$', o).group(1))
+            break
+        if re.search('^[0-9]* subgoals?$', o):
+            delete_subgoals = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
+            break
+    line_index_last_conclusion_sep = FindFinalConclusionSepLineIndex(output_lines)
+    line_index_subgoal_sep = FindFinalSubgoalLineIndex(output_lines)
 
     for line in output_lines[line_index_subgoal_sep:line_index_last_conclusion_sep]:
-      # only count Hxx and not count 'True'
-      if re.search(r'^[H]', line) and not 'True' in line:
-        originsubgoals = originsubgoals + 1
+        # only count Hxx as premises and not count 'True' 2016/12/20
+        if re.search(r'^[H]', line) and not 'True' in line:
+            premises += 1
 
-    if originsubgoals != 0:
-      subgoals_similarity = (originsubgoals-deletesubgoals)/originsubgoals
-    else:
-      ## no subgoals
-      subgoals_similarity = 1
-    ## to do: detect why sometimes subgoals_similarity < 0   
-    if subgoals_similarity < 0:
-      subgoals_similarity = 0
     #count steps and inference rules
-    if subgoals_similarity != 1:
-      #add admit
-      for line in output_lines[line_index_last_conclusion_sep:]:
-        #accumulate subgoals
-        if subgoal_flg == 1:
-          subgoals.append(line)
-          subgoal_flg = 0
-        #check subgoal_flg
-        if re.search("============================",line) or re.search("subgoal [0-9]* is:", line):
-          subgoal_flg = 1
-      for s in subgoals:
-        #check the subgoals' case
-        if "(Subj" in s:
-          subj_subgoals += 1
-        elif "(Acc" in s:
-          acc_subgoals += 1
-        elif "(Dat" in s:
-          dat_subgoals += 1 
-        #create admit command
-        if "?" in s:
-          # substitute existential variables to normal variables(?123 -> x123)
-          s = re.sub("\?", "x", s)
-          assertnums += 1
-          words = s.split()
-          admit_command1 += " assert("
-          for w in words:
-            if re.search("^[xyz][0-9]*", w):
-              var = re.search("^([xyz][0-9]*)", w).group(1)
-              admit_command1 += "forall "+var+", "
-          admit_command1 += s+"). admit."
-        else:
-          admit_command2 += " admit."
-      count_coq_scripts = coq_scripts[-1].replace(
-        ' repeat nltac_base. Qed.',
-        admit_command1+' repeat nltac_base.'+admit_command2+' Grab Existential Variables. admit. admit. Qed. Print t1.')
-      subj_subgoals = subj_subgoals/len(subgoals)
-      acc_subgoals = acc_subgoals/len(subgoals)
-      dat_subgoals = dat_subgoals/len(subgoals)
-    else:
-       count_coq_scripts = coq_scripts[-1].replace(
-       'Qed.', 'Qed. Print t1.')
+    if premises != 0:
+        #add admit
+        for line in output_lines[line_index_last_conclusion_sep:]:
+            #accumulate subgoals
+            if subgoal_flg == 1:
+                subgoals.append(line)
+                subgoal_flg = 0
+            #check subgoal_flg
+            if re.search("============================",line) or re.search("subgoal [0-9]* is:", line):
+                subgoal_flg = 1
+        for s in subgoals:
+            #check subgoals about relations
+            if "=" in s:
+                relation_subgoals += 1
+            #check the subgoals' case
+            if "(Subj" in s:
+                subj_subgoals += 1
+            elif "(Acc" in s:
+                acc_subgoals += 1
+            elif "(Dat" in s:
+                dat_subgoals += 1   
+            #create admit command
+            if "?" in s:
+                # substitute existential variables to normal variables(?123 -> x123)
+                var, var_type, pred, case = "", "", "", ""
+                assertnums += 1
+                words = s.split()
+                for w in words:
+                    if var is not "" and pred is not "":
+                        break
+                    if re.search("^\?.*", w):
+                        if re.search("Subj\s\?", s) or re.search("Acc\s\?", s) or re.search("Dat\s\?", s):
+                            case = re.search("([a-zA-Z]*)\s\?", s).group(1)
+                        var = re.search("^(\?[a-z0-9]*)", w).group(1)
+                    if re.search("\_.*", w):
+                        pred = re.search("^(\_.*)", w).group(1)
+                var = re.sub("\?", "x", var)
+                if var not in assertaxioms:
+                    #add new existential variable
+                    if case != "":
+                        var_type = "Event"
+                    elif pred:
+                        var_type = typeinfo[pred]
+                    else:
+                        var_type = "Entity"
+                    if case != "":
+                        assertaxioms[var] = "\nAxiom "+var+" : "+var_type+".\n"+\
+                                        "Axiom ax_"+var+" : "+pred+" "+"("+case+" "+var+")"+".\n"+\
+                                        "Hint Resolve ax_"+var+"."
+                    else:
+                        assertaxioms[var] = "\nAxiom "+var+" : "+var_type+".\n"+\
+                                        "Axiom ax_"+var+" : "+pred+" "+var+".\n"+\
+                                        "Hint Resolve ax_"+var+"."
+                    admit_command2 += " admit."
+                    assertnums += 1
+                else:
+                    #existantial variable has been already defined as axioms
+                    admit_command2 += " admit."
+            else:
+                admit_command2 += " admit."
+        for assertaxiom in assertaxioms.values():
+            admit_command1 += assertaxiom
+        count_coq_scripts = coq_scripts[-1].replace(
+            ' repeat nltac_base. Qed.',
+            admit_command1+' repeat nltac_base.'+admit_command2+' Grab Existential Variables. admit. admit. Qed. Print t1.')
 
-    process = Popen(\
-      count_coq_scripts, \
-      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
+        subj_subgoals = subj_subgoals/len(subgoals)
+        acc_subgoals = acc_subgoals/len(subgoals)
+        dat_subgoals = dat_subgoals/len(subgoals)
+        #normal subgoals
+        per_delete_subgoals= (delete_subgoals-relation_subgoals)
+        per_relation_subgoals = relation_subgoals
+        #per_delete_subgoals= (delete_subgoals-relation_subgoals)/premises
+        #relation subgoals
+        #per_relation_subgoals = relation_subgoals/premises
+    else:
+        ## no subgoals
+        per_delete_subgoals = 0
+        count_coq_scripts = coq_scripts[-1].replace(
+            'Qed.', 'Qed. Print t1.')
+
     #count steps and inference_rules
+    #print('count_coq_scripts:{0}, before_script:{1}'.format(count_coq_scripts, coq_scripts[-1]))
+    process = Popen(\
+        count_coq_scripts, \
+        shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
     for (i, o) in enumerate(output_lines):
-      if re.search("ex_ind", o):
-        ex_ind += o.count("ex_ind")
-        steps += o.count("ex_ind") 
-      if re.search("and_ind", o):
-        and_ind += o.count("and_ind")
-        steps += o.count("and_ind") 
-      if re.search("eq_ind", o):
-        eq_ind += o.count("eq_ind")
-        steps += o.count("eq_ind") 
-      if re.search("eq_intro", o):
-        ex_intro += o.count("ex_intro")
-        steps += o.count("ex_intro") 
-      if re.search("conj", o):
-        conj += o.count("conj")
-        steps += o.count("conj")
-      #if re.search("^\(?fun", o):
-      #  fun += 1
-      #  steps += 2
+        if re.search("ex_ind", o):
+            ex_ind += o.count("ex_ind")
+            steps += o.count("ex_ind") 
+        if re.search("and_ind", o):
+            and_ind += o.count("and_ind")
+            steps += o.count("and_ind") 
+        if re.search("eq_ind", o):
+            eq_ind += o.count("eq_ind")
+            steps += o.count("eq_ind") 
+        if re.search("eq_intro", o):
+            ex_intro += o.count("ex_intro")
+            steps += o.count("ex_intro") 
+        if re.search("conj", o):
+            conj += o.count("conj")
+            steps += o.count("conj")
+        #if re.search("^\(?fun", o):
+        #  fun += 1
+        #  steps += 2
     fun = axioms + assertnums + 1
     fun_ind = fun
     steps = steps + fun + fun_ind
 
     ## extract origin subgoals from coq_scripts and calculate subgoal similarity
     if len(coq_scripts) == 1 or len(coq_scripts) == 3 or len(coq_scripts) == 5:
-      origin_coq_scripts = coq_scripts[0].replace(
-        'nltac. Set Firstorder Depth 3. nltac',
-        'nltac. Set Firstorder Depth 3. repeat nltac_base')
+        origin_coq_scripts = coq_scripts[0].replace(
+            'nltac. Set Firstorder Depth 3. nltac',
+            'nltac. Set Firstorder Depth 3. repeat nltac_base')
     #negation
     if len(coq_scripts) == 2 or len(coq_scripts) == 4:
-      origin_coq_scripts = coq_scripts[1].replace(
-        'nltac. Set Firstorder Depth 3. nltac',
-        'nltac. Set Firstorder Depth 3. repeat nltac_base')
+        origin_coq_scripts = coq_scripts[1].replace(
+            'nltac. Set Firstorder Depth 3. nltac',
+            'nltac. Set Firstorder Depth 3. repeat nltac_base')
     process = Popen(\
-      origin_coq_scripts, \
-      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        origin_coq_scripts, \
+        shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
     for o in output_lines:
-      # add "focused" for new Coq's script
-      if re.search('^[0-9]* focused subgoals?$', o):
-        deletesubgoals2 = int(re.search(r'^([0-9]*) focused subgoals?$', o).group(1))
-        break
-      if re.search('^[0-9]* subgoals?$', o):
-        deletesubgoals2 = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
-        break
-    line_index_last_conclusion_sep2 = find_final_conclusion_sep_line_index(output_lines)
-    line_index_subgoal_sep2 = find_final_subgoal_line_index(output_lines)
+        # add "focused" for new Coq's version
+        if re.search('^[0-9]* focused subgoals?$', o):
+            origin_delete_subgoals = int(re.search(r'^([0-9]*) focused subgoals?$', o).group(1))
+            break
+        if re.search('^[0-9]* subgoals?$', o):
+            origin_delete_subgoals = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
+            break
+    line_index_last_conclusion_sep2 = FindFinalConclusionSepLineIndex(output_lines)
+    line_index_subgoal_sep2 = FindFinalSubgoalLineIndex(output_lines)
     for line in output_lines[line_index_subgoal_sep2:line_index_last_conclusion_sep2]:
-      ## only count Hxx and not count 'True'
-      if re.search(r'^[H]', line) and not 'True' in line:
-        originsubgoals2 = originsubgoals2 + 1
-    if originsubgoals2 != 0:
-      origin_subgoals_similarity = (originsubgoals2-deletesubgoals2)/originsubgoals2
+        ## only count Hxx and not count 'True' 2016/12/20
+        if re.search(r'^[H]', line) and not 'True' in line:
+            origin_premises += 1
+
+    if origin_premises != 0:
+        for line in output_lines[line_index_last_conclusion_sep2:]:
+            #accumulate subgoals
+            if origin_subgoal_flg == 1:
+                origin_subgoals.append(line)
+                origin_subgoal_flg = 0
+            #check subgoal_flg
+            if re.search("============================",line) or re.search("subgoal [0-9]* is:", line):
+                origin_subgoal_flg = 1
+        for s in origin_subgoals:
+            #check subgoals about relations
+            if "=" in s:
+                origin_relation_subgoals += 1
+            #check the subgoals' case
+            if "(Subj" in s:
+                origin_subj_subgoals += 1
+            elif "(Acc" in s:
+                origin_acc_subgoals += 1
+            elif "(Dat" in s:
+                origin_dat_subgoals += 1
+        origin_subj_subgoals = origin_subj_subgoals/len(origin_subgoals)
+        origin_acc_subgoals = origin_acc_subgoals/len(origin_subgoals)
+        origin_dat_subgoals = origin_dat_subgoals/len(origin_subgoals)
+        #normal subgoals
+        per_origin_delete_subgoals = (origin_delete_subgoals-origin_relation_subgoals)
+        per_origin_relation_subgoals = origin_relation_subgoals
+        #per_origin_delete_subgoals = (origin_delete_subgoals-origin_relation_subgoals)/origin_premises
+        #relation subgoals
+        #per_origin_relation_subgoals = origin_relation_subgoals/origin_premises
     else:
-      ## no subgoals
-      origin_subgoals_similarity = 1
-    ## to do: detect why sometimes subgoals_similarity < 0   
-    if origin_subgoals_similarity < 0:
-      origin_subgoals_similarity = 0
+        ## no subgoals
+        per_origin_delete_subgoals = 0
 
-
-    return axioms, word_similarity, subgoals_similarity, origin_subgoals_similarity, \
+    return axioms, word_similarity, per_delete_subgoals, per_origin_delete_subgoals, \
     steps, ex_ind, and_ind, eq_ind, ex_intro, conj, fun, fun_ind, \
-    subj_subgoals, acc_subgoals, dat_subgoals
-
-
+    subj_subgoals, acc_subgoals, dat_subgoals, origin_subj_subgoals, origin_acc_subgoals, origin_dat_subgoals, \
+    per_relation_subgoals, per_origin_relation_subgoals

@@ -363,7 +363,7 @@ def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args):
             premise_preds, conclusion_pred, pred_args)
     axioms.update(set(linguistic_axioms))
     if not axioms:
-        approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred)
+        approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
         axioms.update(approx_axioms)
     return axioms
 
