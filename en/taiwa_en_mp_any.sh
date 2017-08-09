@@ -262,8 +262,10 @@ function select_answer() {
 
 if [ ! -e ${parsed_dir}/${sentences_basename}.xml ]; then
   echo "Syntactic parsing ${plain_dir}/${sentences_basename}.tok"
-  parse_candc ${sentences_basename}
-  parse_easyccg ${sentences_basename}
+  #parse_candc ${sentences_basename}
+  #parse_easyccg ${sentences_basename}
+  parse_question_candc ${sentences_basename}
+  parse_question_easyccg ${sentences_basename}
 fi
 
 # Semantic parsing the CCG trees in XML.
