@@ -45,7 +45,7 @@ def crossvalidation(clf, X_train, y_train):
 
 def regression(X_train, y_train, X_test, y_test):
     parameters = {
-        'n_estimators'      : [10, 50, 100, 200, 300],
+        'n_estimators'      : [10, 50, 100, 200, 300, 400, 500],
         'random_state'      : [0],
         'n_jobs'            : [200],
         'max_features'      : ['auto', 'log2', 'sqrt', None],
@@ -54,14 +54,14 @@ def regression(X_train, y_train, X_test, y_test):
     }
 
     clf = make_pipeline(
-        #preprocessing.StandardScaler(),
-        preprocessing.MinMaxScaler(),
+        preprocessing.StandardScaler(),
+        #preprocessing.MinMaxScaler(),
         GridSearchCV(RandomForestRegressor(), parameters))
     clf.fit(X_train, y_train)
 
     #Serialize
-    joblib.dump(clf, 'randomforestregressor_wnw2v_sick.pkl')
-    #clf = joblib.load('randomforestregressor_wnw2v_sick.pkl')
+    joblib.dump(clf, 'randomforestregressor.pkl')
+    #clf = joblib.load('randomforestregressor.pkl')
 
     return clf
 
@@ -175,7 +175,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None):
         trial_id = np.array([line[0] for line in sick_test])
 
         # Store to pickle for future reference
-        with open('features_wnw2v_sick_np.pickle', 'wb') as out_f:
+        with open('features_np.pickle', 'wb') as out_f:
             np.save(out_f, train_sources)
             np.save(out_f, train_targets)
             np.save(out_f, trial_sources)
@@ -183,7 +183,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None):
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('features_wnw2v_sick_np.pickle', 'rb') as in_f:
+        with open('features_np.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             train_targets = np.load(in_f)
             trial_sources = np.load(in_f)
@@ -260,6 +260,7 @@ def output_errors(outputs, gold, sick_ids, sick_sentences):
 
 def load_sick_data_from(sick_id, kind):
     line = []
+    print(kind, sick_id)
     line.append(sick_id)
     f = open('./plain2/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
     line.append(f.readlines()[0].strip())
@@ -353,9 +354,6 @@ def main():
     # Check errors
     output_errors(outputs, trial_targets, [line[0] for line in sick_test], [line[2:4] for line in sick_test]) #Outputs and sick_ids
 
-    # Plot deviations
-    #plot_deviation(outputs, trial_targets)
-
     x = np.loadtxt(outputs, dtype=np.float32)
     y = np.loadtxt(trial_targets, dtype=np.float32)
     with open('./results/evaluation.txt', 'w') as eval_f:
@@ -370,6 +368,8 @@ def main():
         ## mean squared error(rmse)
         score = rmse(x, y)
         eval_f.write('mean squared error:{0}\n'.format(score))
+    # Plot deviations
+    plot_deviation(outputs, trial_targets)
     
 
 if __name__ == '__main__':
