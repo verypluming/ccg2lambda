@@ -336,7 +336,7 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 pre_similarity = process.communicate()[0]
                 pre_similarities.append(float(pre_similarity.decode()))
             elif dic == "wn":
-                pre_similarity = WordNetSimilarity(pr, word)
+                pre_similarity = wordnet_similarity(pr, word)
                 pre_similarities.append(pre_similarity)
         word_similarity += max(pre_similarities)
         axioms += 1
