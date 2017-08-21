@@ -371,11 +371,11 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
     for o in output_lines:
         # add "focused" for new Coq's version
-        if re.search('^[0-9]* focused subgoals?$', o):
-            delete_subgoals = int(re.search(r'^([0-9]*) focused subgoals?$', o).group(1))
+        if re.search('[0-9]* focused subgoals?$', o):
+            delete_subgoals = int(re.search(r'([0-9]*) focused subgoals?$', o).group(1))
             break
-        if re.search('^[0-9]* subgoals?$', o):
-            delete_subgoals = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
+        if re.search('[0-9]* subgoals?$', o):
+            delete_subgoals = int(re.search(r'([0-9]*) subgoals?$', o).group(1))
             break
     line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(output_lines)
     line_index_subgoal_sep = find_final_subgoal_line_index(output_lines)
@@ -510,11 +510,11 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
     for o in output_lines:
         # add "focused" for new Coq's version
-        if re.search('^[0-9]* focused subgoals?$', o):
-            origin_delete_subgoals = int(re.search(r'^([0-9]*) focused subgoals?$', o).group(1))
+        if re.search('[0-9]* focused subgoals?$', o):
+            origin_delete_subgoals = int(re.search(r'([0-9]*) focused subgoals?$', o).group(1))
             break
-        if re.search('^[0-9]* subgoals?$', o):
-            origin_delete_subgoals = int(re.search(r'^([0-9]*) subgoals?$', o).group(1))
+        if re.search('[0-9]* subgoals?$', o):
+            origin_delete_subgoals = int(re.search(r'([0-9]*) subgoals?$', o).group(1))
             break
     line_index_last_conclusion_sep2 = find_final_conclusion_sep_line_index(output_lines)
     line_index_subgoal_sep2 = find_final_subgoal_line_index(output_lines)
