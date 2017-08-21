@@ -126,8 +126,8 @@ def create_copy_axioms(relations_to_pairs, relation='copy'):
     if not rel_pairs:
         return axioms
     for t1, t2 in rel_pairs:
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x.'\
-                .format(relation, t1, t2)
+        axiom = 'Axiom ax_{0}_{1} : forall x, _{1} x.'\
+                .format(relation, t2)
         axioms.append(axiom)
     return axioms
 
@@ -183,6 +183,7 @@ def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, t
     return axioms
 
 def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=None):
+    #print("premise_preds:{0}, conclusion_pred:{1}, pred_args:{2}".format(premise_preds, conclusion_pred, pred_args))
     src_preds = [denormalize_token(p) for p in premise_preds]
     trg_pred = denormalize_token(conclusion_pred)
     word_similarity = 0
@@ -190,11 +191,13 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=N
     relations_to_pairs = defaultdict(list)
     relations_to_pairs_pre = []
 
+    stopwords = ['False', 'True', '_False', '_True', 'Entity', 'Event', 'Subj', 'Acc']
+
     for src_pred in src_preds:
         before_src_pred, before_trg_pred = "", ""
-        if src_pred == trg_pred or \
-           src_pred in '_False' or \
-           src_pred in '_True':
+        if src_pred == trg_pred or src_pred in stopwords:
+           #src_pred in '_False' or \
+           #src_pred in '_True':
             continue
         if re.search("(.*?)\_[1-9]", src_pred):
             before_src_pred = src_pred
@@ -217,14 +220,17 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=N
                         word_similarity_list.append(w1.path_similarity(w2))
             if(word_similarity_list):
                 word_similarity = max(word_similarity_list)
-            if before_src_pred:
-                src_pred = before_src_pred
-            if before_trg_pred:
-                trg_pred = before_trg_pred
-            relations_to_pairs_pre.append([relation, src_pred, trg_pred, word_similarity])
-        if before_src_pred:
+            if before_src_pred != "" and before_trg_pred == "":
+                relations_to_pairs_pre.append([relation, before_src_pred, trg_pred, word_similarity])
+            elif before_src_pred == "" and before_trg_pred != "":
+                relations_to_pairs_pre.append([relation, src_pred, before_trg_pred, word_similarity])
+            elif before_src_pred != "" and before_trg_pred != "":
+                relations_to_pairs_pre.append([relation, before_src_pred, before_trg_pred, word_similarity])
+            else:
+                relations_to_pairs_pre.append([relation, src_pred, trg_pred, word_similarity])
+        if before_src_pred != "":
             src_pred = before_src_pred
-        if before_trg_pred:
+        if before_trg_pred != "":
             trg_pred = before_trg_pred
     # select the best predicate relation
     if len(relations_to_pairs_pre) > 0:
@@ -236,8 +242,7 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=N
                 best_trg_pred = relations_to_pairs_pre[i][2]
             else:
                 continue
-        relations_to_pairs[relation].append((src_pred, trg_pred))
-
+        relations_to_pairs[best_relation].append((best_src_pred, best_trg_pred))
     # TODO: add pred_args into the axiom creation.
     antonym_axioms = create_antonym_axioms(relations_to_pairs)
     copy_axioms = create_copy_axioms(relations_to_pairs, 'copy')

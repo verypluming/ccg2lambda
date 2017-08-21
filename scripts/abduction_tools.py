@@ -273,7 +273,8 @@ def make_axioms_from_premises_and_conclusion(premises, conclusions, coq_output_l
                 if re.search("\_.*\s\(?", premise): 
                     premise_preds.append(re.search("(\_.*)\s\(?", premise).group(1))
         else:
-            premise_preds = [premise.split()[2] for premise in matching_premises]
+            #premise_preds = [premise.split()[2] for premise in matching_premises]
+            premise_preds = [premise.split()[2] for premise in premises]
         conclusion_pred = conclusion.split()[0]
         pred_args = get_predicate_arguments(premises, conclusion)
         axioms.update(make_axioms_from_preds(premise_preds, conclusion_pred, pred_args))
@@ -489,8 +490,8 @@ def try_abduction(coq_script, previous_axioms=set(), expected='yes'):
                        "open formula": has_open_formula(output_lines)}
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms
-    matching_premises = get_premises_that_match_conclusion_args(
-        premise_lines, conclusion)
+    #matching_premises = get_premises_that_match_conclusion_args(
+    #    premise_lines, conclusion)
     axioms = make_axioms_from_premises_and_conclusion(
         premise_lines, conclusion, output_lines)
     axioms = filter_wrong_axioms(axioms, coq_script)

@@ -82,16 +82,21 @@ def prove_doc(doc, abduction=None, similarity=None):
         subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2 = 0, 0, 0, 0, 0, 0
         ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2 = 0, 0, 0, 0, 0, 0
         relation_subgoals1, relation_subgoals2, origin_relation_subgoals1, origin_relation_subgoals2 = 0, 0, 0, 0 
+        per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1 = 0, 0, 0, 0
+        per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2 = 0, 0, 0, 0
+
 
         ## prove A->B
+        #print("proof A->B")
         inference_result, coq_script = \
         prove_statements(premises, conclusion, dynamic_library_str)
         coq_scripts.append(coq_script)
         if inference_result:
             inference_result_int1 = 1
             axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
-            subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
-            word_similarity1, subgoals_similarity1, origin_subgoals_similarity1 = 1, 1, 1
+            subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1,\
+            per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+            word_similarity1 = 1
         else:
             negated_conclusion = negate_conclusion(conclusion)
             inference_result, coq_script = \
@@ -100,8 +105,9 @@ def prove_doc(doc, abduction=None, similarity=None):
             if inference_result:
                 inference_result_int1 = 0.5
                 axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
-                subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
-                word_similarity1, subgoals_similarity1, origin_subgoals_similarity1 = 1, 1, 1
+                subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1,\
+                per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+                word_similarity1 = 1
             else:
                 ## try abductions
                 inference_result_str, abduction_scripts = try_sim_abductions(coq_scripts)
@@ -109,21 +115,25 @@ def prove_doc(doc, abduction=None, similarity=None):
                 if inference_result_str == 'yes':
                     inference_result_int1 = 1
                     axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
-                    subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+                    subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1,\
+                    per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
                 elif inference_result_str == 'no':
                     inference_result_int1 = 0.5
                     axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
-                    subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
+                    subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1,\
+                    per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)
                 else:
                     ## reduce subgoals
                     inference_result_str, new_abduction_scripts = try_reduce_subgoals(coq_scripts)
                     coq_scripts.extend(new_abduction_scripts)
                     if inference_result_str == 'yes':
                         axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
-                        subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)                    #elif inference_result_str == 'coq_error':
+                        subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1,\
+                        per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str)                    #elif inference_result_str == 'coq_error':
                     else:
                         return inference_result_str, coq_scripts
         ## prove B->A
+        #print("proof B->A")
         inference_result, coq_script = \
         prove_statements([conclusion], premises[0], dynamic_library_str)
         coq_scripts.append(coq_script)
@@ -131,8 +141,9 @@ def prove_doc(doc, abduction=None, similarity=None):
         if inference_result:
             inference_result_int2 = 1
             axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
-            subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
-            word_similarity2, subgoals_similarity2, origin_subgoals_similarity2 = 1, 1, 1
+            subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2,\
+            per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+            word_similarity2 = 1
         else:
             negated_conclusion = negate_conclusion(conclusion)
             inference_result, coq_script = \
@@ -143,8 +154,9 @@ def prove_doc(doc, abduction=None, similarity=None):
                 #contradiction is mostly similar
                 inference_result_int2 = 0.5
                 axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
-                subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
-                word_similarity2, subgoals_similarity2, origin_subgoals_similarity2 = 1, 1, 1
+                subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2,\
+                per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                word_similarity2 = 1
             else:
                 ## try abductions
                 inference_result_str, abduction_scripts = try_sim_abductions(coq_scripts2)
@@ -153,11 +165,13 @@ def prove_doc(doc, abduction=None, similarity=None):
                 if inference_result_str == 'yes':
                     inference_result_int2 = 1
                     axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
-                    subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                    subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2,\
+                    per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
                 elif inference_result_str == 'no':
                     inference_result_int2 = 0.5
                     axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
-                    subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                    subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2,\
+                    per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
                 else:
                     ## reduce subgoals
                     inference_result_str, new_abduction_scripts = try_reduce_subgoals(coq_scripts2)
@@ -165,7 +179,8 @@ def prove_doc(doc, abduction=None, similarity=None):
                     coq_scripts2.extend(new_abduction_scripts)
                     if inference_result_str == 'yes':
                         axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
-                        subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
+                        subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2,\
+                        per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
                     else:
                         return inference_result_str, coq_scripts
         return [inference_result_int1, word_similarity1, axioms1, subgoals_similarity1,\
@@ -175,7 +190,9 @@ def prove_doc(doc, abduction=None, similarity=None):
         steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
         subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2,\
         ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2,\
-        relation_subgoals1, relation_subgoals2, origin_relation_subgoals1, origin_relation_subgoals2\
+        relation_subgoals1, relation_subgoals2, origin_relation_subgoals1, origin_relation_subgoals2,\
+        per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1,\
+        per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2\
         ], coq_scripts
 
     else:    
@@ -274,7 +291,7 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     word2 = ""
     word_similarity = 0
     premises, delete_subgoals, per_delete_subgoals = 0, 0, 0
-    origin_premises, origin_delete_subgoals, per_origin_delete_subgoals = 0, 0, 0
+    origin_premises, origin_delete_subgoals, per_origin_delete_subgoals  = 0, 0, 0
     axioms = 0
     origin_coq_scripts = ""
     # count steps and inference_rules
@@ -291,6 +308,7 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     assertaxioms = {}
     typeinfo = {}
     relation_subgoals, per_relation_subgoals, origin_relation_subgoals, per_origin_relation_subgoals  = 0, 0, 0, 0
+    per_delete_subgoals_old, per_origin_delete_subgoals_old, per_relation_subgoals_old, per_origin_relation_subgoals_old = 0, 0, 0, 0
 
     # use last coq_scripts
     coq_lines = coq_scripts[-1].split("\n")
@@ -440,12 +458,10 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         #normal subgoals
         per_delete_subgoals= (delete_subgoals-relation_subgoals)
         per_relation_subgoals = relation_subgoals
-        #per_delete_subgoals= (delete_subgoals-relation_subgoals)/premises
-        #relation subgoals
-        #per_relation_subgoals = relation_subgoals/premises
+        per_delete_subgoals_old= (delete_subgoals-relation_subgoals)/premises
+        per_relation_subgoals_old = relation_subgoals/premises
     else:
         ## no subgoals
-        per_delete_subgoals = 0
         count_coq_scripts = coq_scripts[-1].replace(
             'Qed.', 'Qed. Print t1.')
 
@@ -533,14 +549,11 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         #normal subgoals
         per_origin_delete_subgoals = (origin_delete_subgoals-origin_relation_subgoals)
         per_origin_relation_subgoals = origin_relation_subgoals
-        #per_origin_delete_subgoals = (origin_delete_subgoals-origin_relation_subgoals)/origin_premises
-        #relation subgoals
-        #per_origin_relation_subgoals = origin_relation_subgoals/origin_premises
-    else:
-        ## no subgoals
-        per_origin_delete_subgoals = 0
+        per_origin_delete_subgoals_old = (origin_delete_subgoals-origin_relation_subgoals)/origin_premises
+        per_origin_relation_subgoals_old = origin_relation_subgoals/origin_premises
 
     return axioms, word_similarity, per_delete_subgoals, per_origin_delete_subgoals, \
     steps, ex_ind, and_ind, eq_ind, ex_intro, conj, fun, fun_ind, \
     subj_subgoals, acc_subgoals, dat_subgoals, origin_subj_subgoals, origin_acc_subgoals, origin_dat_subgoals, \
-    per_relation_subgoals, per_origin_relation_subgoals
+    per_relation_subgoals, per_origin_relation_subgoals, \
+    per_delete_subgoals_old, per_origin_delete_subgoals_old, per_relation_subgoals_old, per_origin_relation_subgoals_old 
