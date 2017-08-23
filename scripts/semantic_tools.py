@@ -523,7 +523,6 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         ## only count Hxx and not count 'True' 2016/12/20
         if re.search(r'^[H]', line) and not 'True' in line:
             origin_premises += 1
-    print("premises:{0}, origin_premises:{1}".format(premises, origin_premises))
     if origin_premises != 0:
         for line in output_lines[line_index_last_conclusion_sep2:]:
             #accumulate subgoals
@@ -549,7 +548,6 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         origin_acc_subgoals = origin_acc_subgoals/origin_delete_subgoals
         origin_dat_subgoals = origin_dat_subgoals/origin_delete_subgoals
         #normal subgoals
-        print("origin_delete_subgoals:{0}, origin_relation_subgoals:{1}".format(origin_delete_subgoals,origin_relation_subgoals))
         per_origin_delete_subgoals = (origin_delete_subgoals-origin_relation_subgoals)
         per_origin_relation_subgoals = origin_relation_subgoals
         per_origin_delete_subgoals_old = (origin_delete_subgoals-origin_relation_subgoals)/origin_premises
