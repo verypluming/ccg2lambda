@@ -369,14 +369,14 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         new_coq_scripts, \
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
-    for o in output_lines:
-        # add "focused" for new Coq's version
-        if re.search('[0-9]* focused subgoals?$', o):
-            delete_subgoals = int(re.search(r'([0-9]*) focused subgoals?$', o).group(1))
-            break
-        if re.search('[0-9]* subgoals?$', o):
-            delete_subgoals = int(re.search(r'([0-9]*) subgoals?$', o).group(1))
-            break
+    #for o in output_lines:
+    #    # add "focused" for new Coq's version
+    #    if re.search('[0-9]* focused subgoals?$', o):
+    #        delete_subgoals = int(re.search(r'([0-9]*) focused subgoals?$', o).group(1))
+    #        break
+    #    if re.search('[0-9]* subgoals?$', o):
+    #        delete_subgoals = int(re.search(r'([0-9]*) subgoals?$', o).group(1))
+    #        break
     line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(output_lines)
     line_index_subgoal_sep = find_final_subgoal_line_index(output_lines)
 
@@ -452,9 +452,10 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
             ' repeat nltac_base. Qed.',
             admit_command1+' repeat nltac_base.'+admit_command2+' Grab Existential Variables. admit. admit. Qed. Print t1.')
 
-        subj_subgoals = subj_subgoals/len(subgoals)
-        acc_subgoals = acc_subgoals/len(subgoals)
-        dat_subgoals = dat_subgoals/len(subgoals)
+        delete_subgoals = len(subgoals)
+        subj_subgoals = subj_subgoals/delete_subgoals
+        acc_subgoals = acc_subgoals/delete_subgoals
+        dat_subgoals = dat_subgoals/delete_subgoals
         #normal subgoals
         per_delete_subgoals= (delete_subgoals-relation_subgoals)
         per_relation_subgoals = relation_subgoals
@@ -508,21 +509,21 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         origin_coq_scripts, \
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output_lines = [line.decode('utf-8').strip() for line in process.stdout.readlines()]
-    for o in output_lines:
-        # add "focused" for new Coq's version
-        if re.search('[0-9]* focused subgoals?$', o):
-            origin_delete_subgoals = int(re.search(r'([0-9]*) focused subgoals?$', o).group(1))
-            break
-        if re.search('[0-9]* subgoals?$', o):
-            origin_delete_subgoals = int(re.search(r'([0-9]*) subgoals?$', o).group(1))
-            break
+    #for o in output_lines:
+    #    # add "focused" for new Coq's version
+    #    if re.search('[0-9]* focused subgoals?$', o):
+    #        origin_delete_subgoals = int(re.search(r'([0-9]*) focused subgoals?$', o).group(1))
+    #        break
+    #    if re.search('[0-9]* subgoals?$', o):
+    #        origin_delete_subgoals = int(re.search(r'([0-9]*) subgoals?$', o).group(1))
+    #        break
     line_index_last_conclusion_sep2 = find_final_conclusion_sep_line_index(output_lines)
     line_index_subgoal_sep2 = find_final_subgoal_line_index(output_lines)
     for line in output_lines[line_index_subgoal_sep2:line_index_last_conclusion_sep2]:
         ## only count Hxx and not count 'True' 2016/12/20
         if re.search(r'^[H]', line) and not 'True' in line:
             origin_premises += 1
-
+    print("premises:{0}, origin_premises:{1}".format(premises, origin_premises))
     if origin_premises != 0:
         for line in output_lines[line_index_last_conclusion_sep2:]:
             #accumulate subgoals
@@ -543,10 +544,12 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 origin_acc_subgoals += 1
             elif "(Dat" in s:
                 origin_dat_subgoals += 1
-        origin_subj_subgoals = origin_subj_subgoals/len(origin_subgoals)
-        origin_acc_subgoals = origin_acc_subgoals/len(origin_subgoals)
-        origin_dat_subgoals = origin_dat_subgoals/len(origin_subgoals)
+        origin_delete_subgoals = len(origin_subgoals)
+        origin_subj_subgoals = origin_subj_subgoals/origin_delete_subgoals
+        origin_acc_subgoals = origin_acc_subgoals/origin_delete_subgoals
+        origin_dat_subgoals = origin_dat_subgoals/origin_delete_subgoals
         #normal subgoals
+        print("origin_delete_subgoals:{0}, origin_relation_subgoals:{1}".format(origin_delete_subgoals,origin_relation_subgoals))
         per_origin_delete_subgoals = (origin_delete_subgoals-origin_relation_subgoals)
         per_origin_relation_subgoals = origin_relation_subgoals
         per_origin_delete_subgoals_old = (origin_delete_subgoals-origin_relation_subgoals)/origin_premises
