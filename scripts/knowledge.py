@@ -67,7 +67,8 @@ def create_antonym_axioms(relations_to_pairs):
     """
     For every linguistic relationship, check if 'antonym' is present.
     If it is present, then create an entry named:
-    Axiom ax_antonym_token1_token2 : forall x, _token1 x -> _token2 x -> False.
+    before: Axiom ax_antonym_token1_token2 : forall x, _token1 x -> _token2 x -> False.
+    modified: Axiom ax_antonym_token1_token2 : forall x, _token2 x -> False.
     """
     relation = 'antonym'
     antonyms = relations_to_pairs[relation]
@@ -75,7 +76,8 @@ def create_antonym_axioms(relations_to_pairs):
     if not antonyms:
         return axioms
     for t1, t2 in antonyms:
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
+        #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
+        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> False.'\
                 .format(relation, t1, t2)
         axioms.append(axiom)
     return axioms
