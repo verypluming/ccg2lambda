@@ -104,7 +104,8 @@ def create_reventail_axioms(relations_to_pairs, relation='hyponym'):
     """
     For every linguistic relationship, check if 'relation' is present.
     If it is present, then create an entry named:
-    Axiom ax_relation_token1_token2 : forall x, _token2 x -> _token1 x.
+    before: Axiom ax_relation_token1_token2 : forall x, _token2 x -> _token1 x.
+    after: Axiom ax_relation_token1_token2 : forall x, _token1 x -> _token2 x.
     Note how the predicates are reversed.
     """
     rel_pairs = relations_to_pairs[relation]
@@ -112,7 +113,8 @@ def create_reventail_axioms(relations_to_pairs, relation='hyponym'):
     if not rel_pairs:
         return axioms
     for t1, t2 in rel_pairs:
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> _{1} x.'\
+        #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> _{1} x.'\
+        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
                 .format(relation, t1, t2)
         axioms.append(axiom)
     return axioms
