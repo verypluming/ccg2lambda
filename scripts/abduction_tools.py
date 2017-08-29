@@ -264,6 +264,7 @@ def get_subgoals_from_coq_output(coq_output_lines, premises):
 
 def make_axioms_from_premises_and_conclusion(premises, conclusions, coq_script, coq_output_lines=None):
     axioms = set()
+    #make phrase
     for conclusion in conclusions:
         premise_preds = []
         if unicodedata.category(conclusion[1]) == "Lo":

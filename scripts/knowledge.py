@@ -284,7 +284,8 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, coq_script,
     entailed_axioms = create_entail_axioms(relations_to_pairs, 'entailed')
     #hyponym_axioms = create_reventail_axioms(relations_to_pairs)
     hyponym_axioms = create_entail_axioms(relations_to_pairs, 'hyponym')
+    verbocean_axioms = create_entail_axioms(relations_to_pairs, 'verbocean')
     axioms = copy_axioms + antonym_axioms + synonym_axioms + hypernym_axioms + hyponym_axioms \
         + similar_axioms + inflection_axioms + derivation_axioms \
-        + holonym_axioms + meronym_axioms + entailed_axioms
+        + holonym_axioms + meronym_axioms + entailed_axioms + verbocean_axioms
     return list(set(axioms))

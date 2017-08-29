@@ -327,4 +327,6 @@ def get_wordnet_cascade(ling_relations):
     cousin_rels = [lr for lr in ling_relations if lr.startswith('cousin')]
     assert cousin_rels
     relation = cousin_rels[0]
+  else:
+    relation = 'verbocean'
   return relation
