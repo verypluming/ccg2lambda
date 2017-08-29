@@ -75,11 +75,17 @@ def create_antonym_axioms(relations_to_pairs):
     axioms = []
     if not antonyms:
         return axioms
-    for t1, t2 in antonyms:
-        #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> False.'\
-                .format(relation, t1, t2)
-        axioms.append(axiom)
+    for t1, t2, args in antonyms:
+        if len(args["_"+t2]) != 2:
+            #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
+            axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> False.'\
+                    .format(relation, t1, t2)
+            axioms.append(axiom)
+        else:
+            # if predicates contain two arguments (e.g, with x y)
+            axiom = 'Axiom ax_{0}_{1}_{2} : forall x y, _{2} x y -> False.'\
+                    .format(relation, t1, t2)
+            axioms.append(axiom)
     return axioms
 
 
@@ -87,16 +93,24 @@ def create_entail_axioms(relations_to_pairs, relation='synonym'):
     """
     For every linguistic relationship, check if 'relation' is present.
     If it is present, then create an entry named:
-    Axiom ax_relation_token1_token2 : forall x, _token1 x -> _token2 x.
+    before: Axiom ax_relation_token1_token2 : forall x, _token1 x -> _token2 x.
+    after: Axiom ax_relation_token1_token2 : forall x, _token2 x.
     """
     rel_pairs = relations_to_pairs[relation]
     axioms = []
     if not rel_pairs:
         return axioms
-    for t1, t2 in rel_pairs:
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
+    for t1, t2, args in rel_pairs:
+        if len(args["_"+t2]) != 2:
+            #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
+            axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x.'\
                 .format(relation, t1, t2)
-        axioms.append(axiom)
+            axioms.append(axiom)
+        else:
+            # if predicates contain two arguments (e.g, with x y)
+            axiom = 'Axiom ax_{0}_{1}_{2} : forall x y, _{2} x y.'\
+                .format(relation, t1, t2)
+            axioms.append(axiom)
     return axioms
 
 
@@ -104,8 +118,7 @@ def create_reventail_axioms(relations_to_pairs, relation='hyponym'):
     """
     For every linguistic relationship, check if 'relation' is present.
     If it is present, then create an entry named:
-    before: Axiom ax_relation_token1_token2 : forall x, _token2 x -> _token1 x.
-    after: Axiom ax_relation_token1_token2 : forall x, _token1 x -> _token2 x.
+    Axiom ax_relation_token1_token2 : forall x, _token2 x -> _token1 x.
     Note how the predicates are reversed.
     """
     rel_pairs = relations_to_pairs[relation]
@@ -113,8 +126,7 @@ def create_reventail_axioms(relations_to_pairs, relation='hyponym'):
     if not rel_pairs:
         return axioms
     for t1, t2 in rel_pairs:
-        #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> _{1} x.'\
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
+        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> _{1} x.'\
                 .format(relation, t1, t2)
         axioms.append(axiom)
     return axioms
@@ -129,10 +141,16 @@ def create_copy_axioms(relations_to_pairs, relation='copy'):
     axioms = []
     if not rel_pairs:
         return axioms
-    for t1, t2 in rel_pairs:
-        axiom = 'Axiom ax_{0}_{1} : forall x, _{1} x.'\
+    for t1, t2, args in rel_pairs:
+        if len(args["_"+t2]) != 2:
+            axiom = 'Axiom ax_{0}_{1} : forall x, _{1} x.'\
                 .format(relation, t2)
-        axioms.append(axiom)
+            axioms.append(axiom)
+        else:
+            # if predicates contain two arguments (e.g, with x y)
+            axiom = 'Axiom ax_{0}_{1} : forall x y, _{1} x y.'\
+                .format(relation, t2)
+            axioms.append(axiom)
     return axioms
 
 def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, threshold=0.3):
@@ -186,23 +204,30 @@ def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, t
 
     return axioms
 
-def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=None):
-    #print("premise_preds:{0}, conclusion_pred:{1}, pred_args:{2}".format(premise_preds, conclusion_pred, pred_args))
+def get_lexical_relations_from_preds(premise_preds, conclusion_pred, coq_script, pred_args=None):
     src_preds = [denormalize_token(p) for p in premise_preds]
     trg_pred = denormalize_token(conclusion_pred)
-    word_similarity = 0
 
+    word_similarity = 0
     relations_to_pairs = defaultdict(list)
     relations_to_pairs_pre = []
-
     stopwords = ['False', 'True', '_False', '_True', 'Entity', 'Event', 'Subj', 'Acc']
 
+    #pred_type={}
+    #coq_scripts = coq_script.split("\n")
+    #for c in coq_scripts:
+    #    if re.search("^Parameter", c):
+    #        pred = re.search("Parameter _(.*?):", c).group(1)
+    #        pred_type[pred] = re.search(": (.*?)$", c).group(1)
+    
     for src_pred in src_preds:
         before_src_pred, before_trg_pred = "", ""
-        if src_pred == trg_pred or src_pred in stopwords:
-           #src_pred in '_False' or \
-           #src_pred in '_True':
+        #if src_pred == trg_pred:
+        #    continue
+        if src_pred in stopwords:
             continue
+        #if pred_type[src_pred] != pred_type[trg_pred]:
+        #    continue
         if re.search("(.*?)\_[1-9]", src_pred):
             before_src_pred = src_pred
             src_pred = re.search("(.*?)\_[1-9]", src_pred).group(1)
@@ -214,7 +239,6 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=N
         relation = get_wordnet_cascade(relations)
         relations = [relation] if relation is not None else []
         for relation in relations:
-            #  relations_to_pairs[relation].append((src_pred, trg_pred))
             word_similarity_list = []
             wordFromList1 = wn.synsets(src_pred)
             wordFromList2 = wn.synsets(trg_pred)
@@ -246,8 +270,8 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=N
                 best_trg_pred = relations_to_pairs_pre[i][2]
             else:
                 continue
-        relations_to_pairs[best_relation].append((best_src_pred, best_trg_pred))
-    # TODO: add pred_args into the axiom creation.
+        relations_to_pairs[best_relation].append((best_src_pred, best_trg_pred, pred_args))
+    # TODO: add pred_args into the axiom creation. -> Done
     antonym_axioms = create_antonym_axioms(relations_to_pairs)
     copy_axioms = create_copy_axioms(relations_to_pairs, 'copy')
     synonym_axioms = create_entail_axioms(relations_to_pairs, 'synonym')
@@ -255,7 +279,12 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=N
     similar_axioms = create_entail_axioms(relations_to_pairs, 'similar')
     inflection_axioms = create_entail_axioms(relations_to_pairs, 'inflection')
     derivation_axioms = create_entail_axioms(relations_to_pairs, 'derivation')
-    hyponym_axioms = create_reventail_axioms(relations_to_pairs)
+    holonym_axioms = create_entail_axioms(relations_to_pairs, 'holonym')
+    meronym_axioms = create_entail_axioms(relations_to_pairs, 'meronym')
+    entailed_axioms = create_entail_axioms(relations_to_pairs, 'entailed')
+    #hyponym_axioms = create_reventail_axioms(relations_to_pairs)
+    hyponym_axioms = create_entail_axioms(relations_to_pairs, 'hyponym')
     axioms = copy_axioms + antonym_axioms + synonym_axioms + hypernym_axioms + hyponym_axioms \
-        + similar_axioms + inflection_axioms + derivation_axioms
+        + similar_axioms + inflection_axioms + derivation_axioms \
+        + holonym_axioms + meronym_axioms + entailed_axioms
     return list(set(axioms))

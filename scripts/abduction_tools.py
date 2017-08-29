@@ -262,22 +262,25 @@ def get_subgoals_from_coq_output(coq_output_lines, premises):
     return subgoals
 
 
-def make_axioms_from_premises_and_conclusion(premises, conclusions, coq_output_lines=None):
+def make_axioms_from_premises_and_conclusion(premises, conclusions, coq_script, coq_output_lines=None):
     axioms = set()
     for conclusion in conclusions:
-        matching_premises = get_premises_that_match_conclusion_args(premises, conclusion)
         premise_preds = []
         if unicodedata.category(conclusion[1]) == "Lo":
             #for Japanese
+            matching_premises = get_premises_that_match_conclusion_args(premises, conclusion)
             for premise in matching_premises:
                 if re.search("\_.*\s\(?", premise): 
                     premise_preds.append(re.search("(\_.*)\s\(?", premise).group(1))
         else:
             #premise_preds = [premise.split()[2] for premise in matching_premises]
-            premise_preds = [premise.split()[2] for premise in premises]
+            premise_preds = []
+            for premise in premises:
+                if re.search("^H[0-9]*", premise):
+                    premise_preds.append(premise.split()[2])
         conclusion_pred = conclusion.split()[0]
         pred_args = get_predicate_arguments(premises, conclusion)
-        axioms.update(make_axioms_from_preds(premise_preds, conclusion_pred, pred_args))
+        axioms.update(make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script))
         if not axioms and 'False' not in conclusion_pred:
             failure_log = make_failure_log(
                 conclusion_pred, premise_preds, conclusion, premises, coq_output_lines)
@@ -349,7 +352,9 @@ def get_predicate_arguments(premises, conclusion):
         pred = pa[0]
         args = pa[1:]
         if pred in pred_args and pred_args[pred] != args:
-            conflicting_predicates.add(pred)
+            # check if conflicting predicate candidate is not equal to conclusion
+            if pred != conclusion.split()[0]:
+                conflicting_predicates.add(pred)
         pred_args[pred] = args
     logging.debug('Conflicting predicates: ' + str(conflicting_predicates))
     for conf_pred in conflicting_predicates:
@@ -357,15 +362,16 @@ def get_predicate_arguments(premises, conclusion):
     return pred_args
 
 
-def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args):
+def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script):
     axioms = set()
     linguistic_axioms = \
         get_lexical_relations_from_preds(
-            premise_preds, conclusion_pred, pred_args)
+            premise_preds, conclusion_pred, coq_script, pred_args)
     axioms.update(set(linguistic_axioms))
     if not axioms:
         approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
         axioms.update(approx_axioms)
+    axioms = filter_wrong_axioms(axioms, coq_script)
     return axioms
 
 
@@ -490,11 +496,8 @@ def try_abduction(coq_script, previous_axioms=set(), expected='yes'):
                        "open formula": has_open_formula(output_lines)}
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms
-    #matching_premises = get_premises_that_match_conclusion_args(
-    #    premise_lines, conclusion)
     axioms = make_axioms_from_premises_and_conclusion(
-        premise_lines, conclusion, output_lines)
-    axioms = filter_wrong_axioms(axioms, coq_script)
+        premise_lines, conclusion, coq_script, output_lines)
     axioms = axioms.union(previous_axioms)
     new_coq_script = insert_axioms_in_coq_script(axioms, coq_script)
     process = Popen(

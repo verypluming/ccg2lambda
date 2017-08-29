@@ -330,7 +330,10 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 #wordnet  
                 word_lines = coq_line.split("_")
                 word1 = word_lines[2]
-                word2 = re.search("(.*)\.", word_lines[3]).group(1)
+                if not re.match('^[0-9]{1,}$', word_lines[3]):
+                    word2 = word_lines[3].strip()
+                else:
+                    word2 = word_lines[4].strip()
                 merge_axioms[word1].append("wn "+word2)
         if re.search("Parameter", coq_line):
             #use for skipping subgoals with existential variables
