@@ -203,7 +203,7 @@ function select_answer() {
       prediction_fname=$base_fname2
     fi
     #if there is gold answer, check gold answer
-    if [ "$gold_answer" != ""]; then
+    if [ -n "$gold_answer" ]; then
       if [ "$gold_answer" == "$answer1" ]; then
         prediction_fname=$base_fname1 #candc
       elif [ "$gold_answer" == "$answer2" ]; then
