@@ -76,7 +76,7 @@ def create_antonym_axioms(relations_to_pairs):
     if not antonyms:
         return axioms
     for t1, t2, args in antonyms:
-        if len(args["_"+t2]) != 2:
+        if len(args[normalize_token(t2)]) != 2:
             #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
             axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> False.'\
                     .format(relation, t1, t2)
@@ -101,7 +101,7 @@ def create_entail_axioms(relations_to_pairs, relation='synonym'):
     if not rel_pairs:
         return axioms
     for t1, t2, args in rel_pairs:
-        if len(args["_"+t2]) != 2:
+        if len(args[normalize_token(t2)]) != 2:
             #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
             axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x.'\
                 .format(relation, t1, t2)
@@ -142,7 +142,7 @@ def create_copy_axioms(relations_to_pairs, relation='copy'):
     if not rel_pairs:
         return axioms
     for t1, t2, args in rel_pairs:
-        if len(args["_"+t2]) != 2:
+        if len(args[normalize_token(t2)]) != 2:
             axiom = 'Axiom ax_{0}_{1} : forall x, _{1} x.'\
                 .format(relation, t2)
             axioms.append(axiom)
@@ -211,7 +211,8 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, coq_script,
     word_similarity = 0
     relations_to_pairs = defaultdict(list)
     relations_to_pairs_pre = []
-    stopwords = ['False', 'True', '_False', '_True', 'Entity', 'Event', 'Subj', 'Acc']
+    stopwords = ['False', 'True', '_False', '_True', 'Entity', 'Event', 'Subj', 'Acc', 'Dat', \
+    'Rel', 'AccE', 'AccI', 'x1', 'x3']
 
     #pred_type={}
     #coq_scripts = coq_script.split("\n")
@@ -224,7 +225,7 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, coq_script,
         before_src_pred, before_trg_pred = "", ""
         #if src_pred == trg_pred:
         #    continue
-        if src_pred in stopwords:
+        if src_pred in stopwords or trg_pred in stopwords:
             continue
         #if pred_type[src_pred] != pred_type[trg_pred]:
         #    continue
