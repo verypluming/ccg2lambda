@@ -22,6 +22,7 @@ from subprocess import call, Popen
 import json
 import glob
 import re
+from scipy.spatial import distance
 
 #extract features for making phrases
 #wordnetsim, word2vecsim, ngramsim, argument overlap, rte, similarity
@@ -88,15 +89,16 @@ for filename in glob.glob("./results/sick_trial_*.candc.err")[0:4]:
     rte = f.readlines()[0].strip()
     f.close()
     if rte == "yes":
-        rte_f = [1, 0, 0]
+        rte_f = 1
     elif rte == "no":
-        rte_f = [0, 1, 0]
+        rte_f = 0.5
     elif rte == "unknown":
-        rte_f = [0, 0, 1]
+        rte_f = 0
     
     g = open("./plain2/"+fileid+".answer", "r")
     similarity = float(g.readlines()[0].strip())
     g.close()
+    norm_sim = float((similarity - 1) / (5 - 1))
     
     stopwords = ["Entity", "Event", "True", "False", "Prop"]
     for i in infos:
@@ -118,32 +120,43 @@ for filename in glob.glob("./results/sick_trial_*.candc.err")[0:4]:
         prem_pred_cand = extract_pred_features(sub_pred, prem_preds)
         prem_arg_cand = extract_arg_features(sub_arg, prem_infos)
             
+        best_features = [1,1,1,1,1,1]
+        dist = {}
         for prem_pred in prem_preds:
             features = []
             features.extend(prem_pred_cand[prem_pred])
             features.append(prem_arg_cand[prem_pred])
-            features.extend(rte_f)
-            features.append(similarity)
-            print(sub_pred, prem_pred, features)
+            features.append(rte_f)
+            features.append(norm_sim)
+            dist[prem_pred] = distance.cityblock(best_features, features)
+            print(sub_pred, prem_pred, dist[prem_pred])
+        print("final")
+        print(sub_pred, min(dist.items(), key=lambda x:x[1])[0], min(dist.values()))
+        print("\n")
     
 
 #example:
-#area man [0.14285714285714285, 0, 0.2857142857142857, 0, 1, 0, 0, 4.6]
-#area woman [0.1111111111111111, 0, 0.2222222222222222, 0, 1, 0, 0, 4.6]
-#area wood [0.125, 0, 0.0, 0, 1, 0, 0, 4.6]
-#area through [0.5, 0, 0.18181818181818182, 0, 1, 0, 0, 4.6]
-#area walk [0.16666666666666666, 0, 0.25, 0, 1, 0, 0, 4.6]
-#area wood [0.125, 0, 0.0, 0, 1, 0, 0, 4.6]
-#area through [0.5, 0, 0.18181818181818182, 0, 1, 0, 0, 4.6]
-#area walk [0.16666666666666666, 0, 0.25, 0, 1, 0, 0, 4.6]
-#wooded man [0.5, 0, 0.0, 0, 1, 0, 0, 4.6]
-#wooded woman [0.5, 0, 0.36363636363636365, 0, 1, 0, 0, 4.6]
-#wooded wood [0.5, 0, 0.8, 0, 1, 0, 0, 4.6]
-#wooded through [0.5, 0, 0.15384615384615385, 0, 1, 0, 0, 4.6]
-#wooded walk [0.5, 0, 0.2, 0, 1, 0, 0, 4.6]
-#wooded wood [0.5, 0, 0.8, 0, 1, 0, 0, 4.6]
-#wooded through [0.5, 0, 0.15384615384615385, 0, 1, 0, 0, 4.6]
-#wooded walk [0.5, 0, 0.2, 0, 1, 0, 0, 4.6]
+#area man 3.67142857143
+#area woman 3.76666666667
+#area wood 2.975
+#area through 3.41818181818
+#area walk 3.68333333333
+#area wood 2.975
+#area through 3.41818181818
+#area walk 3.68333333333
+#final
+#area wood 2.975
+
+#wooded man 3.6
+#wooded woman 3.23636363636
+#wooded wood 1.8
+#wooded through 3.44615384615
+#wooded walk 3.4
+#wooded wood 1.8
+#wooded through 3.44615384615
+#wooded walk 3.4
+#final
+#wooded wood 1.8
     
 
 
