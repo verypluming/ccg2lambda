@@ -248,7 +248,7 @@ except:
 def get_verbocean_relations(verb1, verb2):
     if verb1 in verbocean and verb2 in verbocean[verb1]:
         return set(verbocean[verb1][verb2])
-    return set()
+    return False
 
 # Find linguistic relationship between two words.
 # Remaining relationships that I would like to implement:
@@ -292,7 +292,8 @@ def linguistic_relationship(word1, word2):
     if is_derivation(word1, word2):
         ling_relations.append('derivation')
     # Typical types of verbocean relations are "happens-before" or "stronger-than"
-    ling_relations.extend(get_verbocean_relations(base_word1, base_word2))
+    if get_verbocean_relations(base_word1, base_word2):
+      ling_relations.append('verbocean')
     return ling_relations
 
 def get_wordnet_cascade(ling_relations):
@@ -327,6 +328,6 @@ def get_wordnet_cascade(ling_relations):
     cousin_rels = [lr for lr in ling_relations if lr.startswith('cousin')]
     assert cousin_rels
     relation = cousin_rels[0]
-  else:
+  elif 'verbocean' in ling_relations:
     relation = 'verbocean'
   return relation
