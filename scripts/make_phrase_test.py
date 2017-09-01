@@ -23,7 +23,7 @@ import json
 import glob
 import re
 from scipy.spatial import distance
-
+from normalization import denormalize_token, normalize_token
 #extract features for making phrases
 #wordnetsim, word2vecsim, ngramsim, argument overlap, rte, similarity
 
@@ -68,19 +68,25 @@ def extract_arg_features(sub_arg, prem_infos):
     prem_arg_cand = {}
     
     for prem_info in prem_infos:
-        prem_pred = prem_info.split()[2]
-        prem_pred = prem_pred.lstrip("_")
+        if re.search("^H", prem_info):
+            prem_pred = prem_info.split()[2]
+        else:
+            continue
+        prem_pred = denormalize_token(prem_pred)
         if prem_pred in stopwords:
             continue
         prem_arg = prem_info.split()[3:]
+        print("prem_pred:{0}, prem_info:{1}".format(prem_pred, prem_info))
         if str(sub_arg) == str(prem_arg):
             prem_arg_cand[prem_pred] = 1
         else:
             prem_arg_cand[prem_pred] = 0
     return prem_arg_cand
 
-for filename in glob.glob("./results/sick_trial_*.candc.err")[0:4]:
+j = open("phrasecand.txt", "w")
+for filename in glob.glob("./results/sick_trial_*.candc.err"):
     fileid = re.search("./results/(.*).candc.err", filename).group(1)
+    print(fileid)
     rawfile = open(filename, "r")
     infos = rawfile.readlines()
     rawfile.close()
@@ -102,7 +108,10 @@ for filename in glob.glob("./results/sick_trial_*.candc.err")[0:4]:
     
     stopwords = ["Entity", "Event", "True", "False", "Prop"]
     for i in infos:
-        info = json.loads(i)
+        try:
+            info = json.loads(i)
+        except ValueError:
+            continue
         if "raw sub-goal" not in info:
             continue
         sub_info = info["raw sub-goal"].split()
@@ -129,11 +138,11 @@ for filename in glob.glob("./results/sick_trial_*.candc.err")[0:4]:
             features.append(rte_f)
             features.append(norm_sim)
             dist[prem_pred] = distance.cityblock(best_features, features)
-            print(sub_pred, prem_pred, dist[prem_pred])
-        print("final")
-        print(sub_pred, min(dist.items(), key=lambda x:x[1])[0], min(dist.values()))
-        print("\n")
-    
+            #print(sub_pred, prem_pred, dist[prem_pred])
+        if len(dist) > 0:
+            j.write("{0}, {1}, {2}, {3}\n".format(fileid, sub_pred, min(dist.items(), key=lambda x:x[1])[0], min(dist.values())))
+
+j.close()
 
 #example:
 #area man 3.67142857143
