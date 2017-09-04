@@ -77,10 +77,10 @@
 #   # semantics: \E F1 F2. exists x. ((x = E) & F1(E) & F2(E))
 #   child0_pos: NNP
 
-- category: NP
-  rule: lex
-  semantics: \E F1 F2. exists x. ((x = E) & F1(E) & F2(E))
-  child0_pos: CD
+#- category: NP
+#  rule: lex
+#  semantics: \E F1 F2. exists x. ((x = E) & F1(E) & F2(E))
+#  child0_pos: CD
 
 - category: NP
   rule: lex
