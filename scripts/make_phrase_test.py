@@ -69,6 +69,9 @@ def extract_arg_features(sub_arg, prem_infos):
     
     for prem_info in prem_infos:
         if re.search("^H", prem_info):
+            if re.search("forall", prem_info) or re.search("exists", prem_info):
+                #temporarily(the case if 'not' is contained)
+                continue
             prem_pred = prem_info.split()[2]
         else:
             continue
@@ -76,7 +79,6 @@ def extract_arg_features(sub_arg, prem_infos):
         if prem_pred in stopwords:
             continue
         prem_arg = prem_info.split()[3:]
-        print("prem_pred:{0}, prem_info:{1}".format(prem_pred, prem_info))
         if str(sub_arg) == str(prem_arg):
             prem_arg_cand[prem_pred] = 1
         else:
@@ -133,8 +135,11 @@ for filename in glob.glob("./results/sick_trial_*.candc.err"):
         dist = {}
         for prem_pred in prem_preds:
             features = []
-            features.extend(prem_pred_cand[prem_pred])
-            features.append(prem_arg_cand[prem_pred])
+            try:
+                features.extend(prem_pred_cand[prem_pred])
+                features.append(prem_arg_cand[prem_pred])
+            except:
+                continue
             features.append(rte_f)
             features.append(norm_sim)
             dist[prem_pred] = distance.cityblock(best_features, features)
