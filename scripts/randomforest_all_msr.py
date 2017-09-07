@@ -26,7 +26,7 @@ import sys
 import matplotlib.pyplot as plt
 import random
 import difflib
-import feature_extraction
+import feature_extraction_msr as feature_extraction
 
 from sklearn.pipeline import make_pipeline
 from sklearn import preprocessing
@@ -59,7 +59,7 @@ def regression(X_train, y_train, X_test, y_test):
     clf.fit(X_train, y_train)
 
     #Serialize
-    joblib.dump(clf, 'randomforestregressor.pkl')
+    joblib.dump(clf, './vid_results/randomforestregressor.pkl')
     #clf = joblib.load('randomforestregressor.pkl')
 
     return clf
@@ -172,7 +172,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None):
         trial_id = np.array([line[0] for line in sick_test])
 
         # Store to pickle for future reference
-        with open('features_np.pickle', 'wb') as out_f:
+        with open('vid_results/features_np.pickle', 'wb') as out_f:
             np.save(out_f, train_sources)
             np.save(out_f, train_targets)
             np.save(out_f, trial_sources)
@@ -211,7 +211,7 @@ def plot_deviation(outputs, actual):
     plt.savefig('./results/result.png', bbox_inches='tight')
 
 def write_for_evaluation(outputs, sick_ids, trial_targets):
-    with open('./results/all_result.txt', 'w') as out_f:
+    with open('./vid_results/all_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tentailment_judgment\trelatedness_score\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
@@ -220,20 +220,20 @@ def write_for_evaluation(outputs, sick_ids, trial_targets):
                 data = 5.0
             elif data < 1.0:
                 data = 1.0
-            if os.path.isfile('./plain/sick_test_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_test_'+sick_ids[i]+'.answer', 'r')
+            if os.path.isfile('./vid_plain/sick_test_'+sick_ids[i]+'.answer'):
+                j = open('./vid_plain/sick_test_'+sick_ids[i]+'.answer', 'r')
                 entailment = j.readlines()[0].strip()
                 j.close()
                 out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
-            elif os.path.isfile('./plain/sick_train_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_train_'+sick_ids[i]+'.answer', 'r')
+            elif os.path.isfile('./vid_plain/sick_train_'+sick_ids[i]+'.answer'):
+                j = open('./vid_plain/sick_train_'+sick_ids[i]+'.answer', 'r')
                 entailment = j.readlines()[0].strip()
                 j.close()
                 out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
 
 
 def output_errors(outputs, gold, sick_ids, sick_sentences):
-    with open('./results/error_result.txt', 'w') as out_f:
+    with open('./vid_results/error_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tdiff\tpred\tcorr\tsentence1\tsentence2\n')
         errs = []
         for i, line in enumerate(outputs):
@@ -253,17 +253,17 @@ def output_errors(outputs, gold, sick_ids, sick_sentences):
 def load_sick_data_from(sick_id, kind):
     line = []
     line.append(sick_id)
-    f = open('./plain2/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
+    f = open('./vid_plain2/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
     line.append(f.readlines()[0].strip())
     f.close()
 
-    g = open('./plain/sick_'+kind.lower()+'_'+sick_id+'.txt', 'r')
+    g = open('./vid_plain/sick_'+kind.lower()+'_'+sick_id+'.txt', 'r')
     texts = g.readlines()
     line.append(texts[0].strip())
     line.append(texts[1].strip())
     g.close()
-    if os.path.exists('./results/sick_'+kind.lower()+'_'+sick_id+'.answer'):
-        h = open('./results/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
+    if os.path.exists('./vid_results/sick_'+kind.lower()+'_'+sick_id+'.answer'):
+        h = open('./vid_results/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
         result = h.readlines()
         if result and not re.search("coq_error", result[0]) and not "unknown\n" in result:
             results = result[0].split(",")
@@ -276,7 +276,7 @@ def load_sick_data_from(sick_id, kind):
     else:
         return None
 
-    i = open('./plain/sick_'+kind.lower()+'_'+sick_id+'.tok', 'r')
+    i = open('./vid_plain/sick_'+kind.lower()+'_'+sick_id+'.tok', 'r')
     texts = i.readlines()
     line.append(texts[0].strip())
     line.append(texts[1].strip())
@@ -326,7 +326,7 @@ def main():
 
     x = np.loadtxt(outputs, dtype=np.float32)
     y = np.loadtxt(trial_targets, dtype=np.float32)
-    with open('./results/evaluation.txt', 'w') as eval_f:
+    with open('./vid_results/evaluation.txt', 'w') as eval_f:
         ## pearson correlation
         r, p = pearsonr(x, y)
         eval_f.write('pearson correlation: {r}\n'.format(r=r))

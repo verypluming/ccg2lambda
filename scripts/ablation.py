@@ -204,11 +204,11 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
         with open('features_np.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             if len(train) == 0:
-                nums = train.split(":")
+                nums = train[0].split(":")
                 train_sources = train_sources[:, int(nums[0]):int(nums[1])]
             else:
-                for i, t in enumaerate(train):
-                    nums = train.split(":")
+                for i, t in enumerate(train):
+                    nums = t.split(":")
                     if i == 0:
                         train_sources_new = train_sources[:, int(nums[0]):int(nums[1])]
                     else:
@@ -217,11 +217,11 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             train_targets = np.load(in_f)
             trial_sources = np.load(in_f)
             if len(trial) == 0:
-                nums = trial.split(":")
+                nums = trial[0].split(":")
                 trial_sources = trial_sources[:, int(nums[0]):int(nums[1])]
             else:
-                for i, t in enumaerate(trial):
-                    nums = trial.split(":")
+                for i, t in enumerate(trial):
+                    nums = t.split(":")
                     if i == 0:
                         trial_sources_new = trial_sources[:, int(nums[0]):int(nums[1])]
                     else:
