@@ -99,9 +99,9 @@ def synset_distance(sentence_a, sentence_b):
 
 def pred_overlap(sick_id, kind=None):
     if kind:
-        filename = "./parsed/*_"+kind+"_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+kind+"_"+sick_id+".sem.xml"
     else:
-        filename = "./parsed/*_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+sick_id+".sem.xml"
     if glob.glob(filename) is None:
         return 0
     else:
@@ -115,9 +115,9 @@ def pred_overlap(sick_id, kind=None):
 
 def type_overlap(sick_id, kind=None):
     if kind:
-        filename = "./parsed/*_"+kind+"_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+kind+"_"+sick_id+".sem.xml"
     else:
-        filename = "./parsed/*_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+sick_id+".sem.xml"
     if glob.glob(filename) is None:
         return 0
     else:
@@ -138,9 +138,9 @@ def type_overlap(sick_id, kind=None):
     
 def pos_overlap(sick_id, kind=None):
     if kind:
-        filename = "./parsed/*_"+kind+"_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+kind+"_"+sick_id+".sem.xml"
     else:
-        filename = "./parsed/*_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+sick_id+".sem.xml"
     if glob.glob(filename) is None:
         return 0
     else:
@@ -165,9 +165,9 @@ def get_nouns(root):
 def noun_overlap(sick_id, kind=None):
     score = 0
     if kind:
-        filename = "./parsed/*_"+kind+"_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+kind+"_"+sick_id+".sem.xml"
     else:
-        filename = "./parsed/*_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+sick_id+".sem.xml"
     if glob.glob(filename) is None:
         return 0
     else:
@@ -194,9 +194,9 @@ def get_verbs(root):
 def verb_overlap(sick_id, kind=None):
     score = 0
     if kind:
-        filename = "./parsed/*_"+kind+"_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+kind+"_"+sick_id+".sem.xml"
     else:
-        filename = "./parsed/*_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+sick_id+".sem.xml"
     if glob.glob(filename) is None:
         return 0
     else:
@@ -266,9 +266,9 @@ def get_passive(root):
 def passive_overlap(sick_id, kind=None):
     score = 0
     if kind:
-        filename = "./parsed/*_"+kind+"_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+kind+"_"+sick_id+".sem.xml"
     else:
-        filename = "./parsed/*_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+sick_id+".sem.xml"
     if glob.glob(filename) is None:
         return 0
     else:
@@ -292,9 +292,9 @@ def get_negation(root):
 def negation_overlap(sick_id, kind=None):
     score = 0
     if kind:
-        filename = "./parsed/*_"+kind+"_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+kind+"_"+sick_id+".sem.xml"
     else:
-        filename = "./parsed/*_"+sick_id+".sem.xml"
+        filename = "./vid_parsed/*_"+sick_id+".sem.xml"
     if glob.glob(filename) is None:
         return 0
     else:
