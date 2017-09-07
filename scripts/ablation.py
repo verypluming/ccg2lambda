@@ -417,7 +417,7 @@ def main():
             score = rmse(x, y)
             eval_f.write('mean squared error:{0}\n'.format(score))
         # Plot deviations
-        plot_deviation(outputs, trial_targets)
+        #plot_deviation(outputs, trial_targets)
     
 
 if __name__ == '__main__':
