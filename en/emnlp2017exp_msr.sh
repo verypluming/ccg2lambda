@@ -23,9 +23,9 @@ if [ "$word2vec" == "word2vec" ]; then
 fi
 
 #make directory
-plain_dir=plain
-plain_dir2=plain2
-results_dir=results
+plain_dir=vid_plain
+plain_dir2=vid_plain2
+results_dir=vid_results
 if [ ! -d ${plain_dir} ]; then
   mkdir -p ${plain_dir}
 fi
@@ -34,11 +34,11 @@ if [ ! -d ${plain2_dir} ]; then
 fi
 
 #download MSR-video dataset
-wget https://www.cs.york.ac.uk/semeval-2012/task6/data/uploads/datasets/train.tgz
-wget https://www.cs.york.ac.uk/semeval-2012/task6/data/uploads/datasets/test-gold.tgz
-tar xvfz train.tgz
-tar xvfz test-gold.tgz
-python en/separate_msr.py
+#wget https://www.cs.york.ac.uk/semeval-2012/task6/data/uploads/datasets/train.tgz
+#wget https://www.cs.york.ac.uk/semeval-2012/task6/data/uploads/datasets/test-gold.tgz
+#tar xvfz train.tgz
+#tar xvfz test-gold.tgz
+#python en/separate_msr.py
 
 # How many processes in parallel you want to run.
 # The maximum number should be inferior to the number of cores in your machine.
@@ -55,14 +55,14 @@ templates=$2
 #
 
 # Copy a coq static library and compile it
-cp en/coqlib_sick.v coqlib.v
-coqc coqlib.v
-cp en/tactics_coq_sick.txt tactics_coq.txt
+#cp en/coqlib_sick.v coqlib.v
+#coqc coqlib.v
+#cp en/tactics_coq_sick.txt tactics_coq.txt
 
 for dataset in {train,test}; do
   # Run pipeline for each entailment problem.
   for i in {1..750}; do
-      ./en/similarity_en_mp_any.sh ./${plain_dir}/sick_${dataset}_$i.txt $templates $word2vec;
+      ./en/similarity_en_mp_any_bk.sh ./${plain_dir}/sick_${dataset}_$i.txt $templates $word2vec;
   done &
 
   # Wait for the parallel processes to finish.
@@ -153,10 +153,10 @@ for dataset in {train,test}; do
   " >> $results_dir/main_${dataset}.html
 done
 
-if [ "$word2vec" == "word2vec" ]; then
-  processid=$(ps ax|grep "word2vec-api.py"|grep -v grep|awk '{print $1}')
-  kill $processid
-fi
+#if [ "$word2vec" == "word2vec" ]; then
+#  processid=$(ps ax|grep "word2vec-api.py"|grep -v grep|awk '{print $1}')
+#  kill $processid
+#fi
 
 python scripts/randomforest_all_msr.py
 

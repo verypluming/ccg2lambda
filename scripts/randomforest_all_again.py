@@ -35,6 +35,7 @@ from sklearn import linear_model
 from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
 import re
+import argparse
 
 
 from sklearn.cross_validation import cross_val_score
@@ -43,7 +44,7 @@ def crossvalidation(clf, X_train, y_train):
     scores = cross_val_score(clf, X_train, y_train, cv=10)
     return scores.mean(), scores.std()
 
-def regression(X_train, y_train, X_test, y_test):
+def regression(X_train, y_train, X_test, y_test, results):
     parameters = {
         'n_estimators'      : [10, 50, 100, 200, 300, 400, 500],
         'random_state'      : [0],
@@ -60,7 +61,7 @@ def regression(X_train, y_train, X_test, y_test):
     clf.fit(X_train, y_train)
 
     #Serialize
-    #joblib.dump(clf, 'randomforestregressor.pkl')
+    joblib.dump(clf, './'+results+'/randomforestregressor.pkl')
     #clf = joblib.load('randomforestregressor.pkl')
 
     return clf
@@ -176,8 +177,8 @@ def get_features(line):
     return features
 
 
-def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None):
-    if recalc:
+def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None):
+    if recalc == 1:
         # Extract training features and targets
         print ('Feature extraction (train)...')
         train_sources = np.array([get_features(line) for line in sick_train])
@@ -193,7 +194,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
         trial_id = np.array([line[0] for line in sick_test])
 
         # Store to pickle for future reference
-        with open('features_np.pickle', 'wb') as out_f:
+        with open('./'+results+'/features_np.pickle', 'wb') as out_f:
             np.save(out_f, train_sources)
             np.save(out_f, train_targets)
             np.save(out_f, trial_sources)
@@ -201,38 +202,28 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./results/features_np.pickle', 'rb') as in_f:
+        with open('./'+results+'/all/features_np.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
-            if len(train) == 0:
-                nums = train[0].split(":")
-                train_sources = train_sources[:, int(nums[0]):int(nums[1])]
-            else:
-                for i, t in enumerate(train):
-                    nums = t.split(":")
-                    if i == 0:
-                        train_sources_new = train_sources[:, int(nums[0]):int(nums[1])]
-                    else:
-                        train_sources_new = np.hstack((train_sources_new, train_sources[:, int(nums[0]):int(nums[1])]))
-                train_sources = train_sources_new
             train_targets = np.load(in_f)
             trial_sources = np.load(in_f)
-            if len(trial) == 0:
-                nums = trial[0].split(":")
-                trial_sources = trial_sources[:, int(nums[0]):int(nums[1])]
-            else:
-                for i, t in enumerate(trial):
-                    nums = t.split(":")
-                    if i == 0:
-                        trial_sources_new = trial_sources[:, int(nums[0]):int(nums[1])]
-                    else:
-                        trial_sources_new = np.hstack((trial_sources_new, trial_sources[:, int(nums[0]):int(nums[1])]))
-                trial_sources = trial_sources_new
             trial_targets = np.load(in_f)
             train_id = np.load(in_f)
             trial_id = np.load(in_f)
+        # Extract trial features and targets
+        print ('Feature extraction (trial)...')
+        trial_sources = np.array([get_features(line) for line in sick_test])
+        trial_targets = np.array([float(line[1]) for line in sick_test])
+        trial_id = np.array([line[0] for line in sick_test])
+        with open('./'+results+'/all/features_np_again.pickle', 'wb') as out_f:
+            np.save(out_f, train_sources)
+            np.save(out_f, train_targets)
+            np.save(out_f, trial_sources)
+            np.save(out_f, trial_targets)
+            np.save(out_f, train_id)
+            np.save(out_f, trial_id)
     return train_sources, train_targets, trial_sources, trial_targets
 
-def plot_deviation(outputs, actual):
+def plot_deviation(outputs, actual, results):
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)
     plt.title('Comparison')
@@ -251,10 +242,10 @@ def plot_deviation(outputs, actual):
     plt.xlabel('Sentence no.')
     plt.ylabel('Relatedness')
 
-    plt.savefig('./results/result.png', bbox_inches='tight')
+    plt.savefig('./'+results+'/result.png', bbox_inches='tight')
 
-def write_for_evaluation(outputs, sick_ids, trial_targets, name):
-    with open('./results/'+name+'_all_result.txt', 'w') as out_f:
+def write_for_evaluation(outputs, sick_ids, trial_targets, results):
+    with open('./'+results+'/all_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tentailment_judgment\trelatedness_score\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
@@ -280,8 +271,8 @@ def write_for_evaluation(outputs, sick_ids, trial_targets, name):
                 out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
 
 
-def output_errors(outputs, gold, sick_ids, sick_sentences, name):
-    with open('./results/'+name+'_error_result.txt', 'w') as out_f:
+def output_errors(outputs, gold, sick_ids, sick_sentences, results):
+    with open('./'+results+'/error_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tdiff\tpred\tcorr\tsentence1\tsentence2\n')
         errs = []
         for i, line in enumerate(outputs):
@@ -298,7 +289,7 @@ def output_errors(outputs, gold, sick_ids, sick_sentences, name):
 
 
 
-def load_sick_data_from(sick_id, kind):
+def load_sick_data_from(sick_id, kind, results):
     line = []
     print(kind, sick_id)
     line.append(sick_id)
@@ -311,8 +302,8 @@ def load_sick_data_from(sick_id, kind):
     line.append(texts[0].strip())
     line.append(texts[1].strip())
     g.close()
-    if os.path.exists('./results/sick_'+kind.lower()+'_'+sick_id+'.answer'):
-        h = open('./results/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
+    if os.path.exists('./'+results+'/sick_'+kind.lower()+'_'+sick_id+'.answer'):
+        h = open('./'+results+'/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
         result = h.readlines()
         if result and not re.search("coq_error", result[0]) and not "unknown\n" in result:
             results = result[0].split(",")
@@ -343,18 +334,18 @@ def load_sick_data_from(sick_id, kind):
 
     return line
 
-def load_sick_data():
+def load_sick_data(results):
     sick_train, sick_test = [], []
     for line in open('./en/SICK.semeval.txt'):
         if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TRAIN':
-            if load_sick_data_from(line.split('\t')[0], 'TRAIN') is not None:
-                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRAIN'))
+            if load_sick_data_from(line.split('\t')[0], 'TRAIN', results) is not None:
+                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRAIN', results))
         if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TRIAL':
-            if load_sick_data_from(line.split('\t')[0], 'TRIAL') is not None:
-                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRIAL'))
+            if load_sick_data_from(line.split('\t')[0], 'TRIAL', results) is not None:
+                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRIAL', results))
         if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TEST':
-            if load_sick_data_from(line.split('\t')[0], 'TEST') is not None:
-                sick_test.append(load_sick_data_from(line.split('\t')[0], 'TEST'))
+            if load_sick_data_from(line.split('\t')[0], 'TEST', results) is not None:
+                sick_test.append(load_sick_data_from(line.split('\t')[0], 'TEST', results))
        # if len(sick_train) == 10:
        #     break
     return sick_train, sick_test
@@ -370,54 +361,50 @@ def rmse(x, y):
     return np.sqrt(((y - x) ** 2).mean())
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--results", default="results")
+    args = parser.parse_args()
     # Load sick data
-    sick_train, sick_test = load_sick_data()
+    sick_train, sick_test = load_sick_data(args.results)
     random.seed(23)
     random.shuffle(sick_train)
     random.shuffle(sick_test)
     print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
 
+    # Get training and trial features
+    train_sources, train_targets, trial_sources, trial_targets = retrieve_features(1, sick_train, sick_test, args.results)
+    #train_sources, train_targets, trial_sources, trial_targets = retrieve_features()
+    #train_sources, train_targets, trial_sources, trial_targets = retrieve_features(0, sick_train, sick_test, args.results)
+    
+    # Train the regressor
+    clf = regression(train_sources, train_targets, trial_sources, trial_targets, args.results)
 
-    g = open("./ablation.txt", "r")
-    commands = g.readlines()
-    g.close()
-    for command in commands:
-        lines = command.split("\t")
-        name = lines[0]
-        train = lines[1].strip().split(",")
-        trial = lines[2].strip().split(",")
-        # Get training and trial features
-        train_sources, train_targets, trial_sources, trial_targets = retrieve_features(train, trial)
+    # Apply regressor to trial data
+    outputs = clf.predict(trial_sources)
+    trial_targets = np.array([float(line[1]) for line in sick_test])
 
-        # Train the regressor
-        clf = regression(train_sources, train_targets, trial_sources, trial_targets)
+    # Evaluate regressor
+    write_for_evaluation(outputs, [line[0] for line in sick_test], trial_targets, args.results) #Outputs and sick_ids
 
-        # Apply regressor to trial data
-        outputs = clf.predict(trial_sources)
-        trial_targets = np.array([float(line[1]) for line in sick_test])
+    # Check errors
+    output_errors(outputs, trial_targets, [line[0] for line in sick_test], [line[2:4] for line in sick_test], args.results) #Outputs and sick_ids
 
-        # Evaluate regressor
-        write_for_evaluation(outputs, [line[0] for line in sick_test], trial_targets, name) #Outputs and sick_ids
+    x = np.loadtxt(outputs, dtype=np.float32)
+    y = np.loadtxt(trial_targets, dtype=np.float32)
+    with open('./'+args.results+'/evaluation.txt', 'w') as eval_f:
+        ## pearson correlation
+        r, p = pearsonr(x, y)
+        eval_f.write('pearson correlation: {r}\n'.format(r=r))
 
-        # Check errors
-        output_errors(outputs, trial_targets, [line[0] for line in sick_test], [line[2:4] for line in sick_test], name) #Outputs and sick_ids
+        ## spearman correlation
+        r, p = spearmanr(x, y)
+        eval_f.write('spearman correlation: {r}\n'.format(r=r))
 
-        x = np.loadtxt(outputs, dtype=np.float32)
-        y = np.loadtxt(trial_targets, dtype=np.float32)
-        with open('./results/'+name+'_evaluation.txt', 'w') as eval_f:
-            ## pearson correlation
-            r, p = pearsonr(x, y)
-            eval_f.write('pearson correlation: {r}\n'.format(r=r))
-
-            ## spearman correlation
-            r, p = spearmanr(x, y)
-            eval_f.write('spearman correlation: {r}\n'.format(r=r))
-
-            ## mean squared error(rmse)
-            score = rmse(x, y)
-            eval_f.write('mean squared error:{0}\n'.format(score))
-        # Plot deviations
-        #plot_deviation(outputs, trial_targets)
+        ## mean squared error(rmse)
+        score = rmse(x, y)
+        eval_f.write('mean squared error:{0}\n'.format(score))
+    # Plot deviations
+    plot_deviation(outputs, trial_targets, args.results)
     
 
 if __name__ == '__main__':

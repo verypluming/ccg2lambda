@@ -1,28 +1,15 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
-#
-#  Copyright 2017 Hitomi Yanaka
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
 
-
+#for supervised learning
 import os
 import numpy as np
 import scipy as sp
 from scipy.stats import pearsonr, spearmanr
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, ExtraTreesClassifier, ExtraTreesRegressor
 from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import mean_squared_error, classification_report
+from sklearn.metrics import mean_squared_error, classification_report, accuracy_score, f1_score
+from deep_forest import MGCForest
+import uuid
 import sys
 import matplotlib.pyplot as plt
 import random
@@ -35,7 +22,7 @@ from sklearn import linear_model
 from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
 import re
-
+import argparse
 
 from sklearn.cross_validation import cross_val_score
 
@@ -43,27 +30,85 @@ def crossvalidation(clf, X_train, y_train):
     scores = cross_val_score(clf, X_train, y_train, cv=10)
     return scores.mean(), scores.std()
 
-def regression(X_train, y_train, X_test, y_test):
+def regression(X_train, y_train, X_test, y_test, results):
     parameters = {
         'n_estimators'      : [10, 50, 100, 200, 300, 400, 500],
         'random_state'      : [0],
         'n_jobs'            : [200],
         'max_features'      : ['auto', 'log2', 'sqrt', None],
-        'criterion'         : ['mse'],
+        'criterion'         : ['gini'],
         'max_depth'         : [3, 5, 10, 20, 30, 40, 50, 100]
     }
 
     clf = make_pipeline(
         preprocessing.StandardScaler(),
-        #preprocessing.MinMaxScaler(),
-        GridSearchCV(RandomForestRegressor(), parameters))
+    #    preprocessing.MinMaxScaler(),
+        GridSearchCV(RandomForestClassifier(), parameters))
     clf.fit(X_train, y_train)
 
     #Serialize
-    #joblib.dump(clf, 'randomforestregressor.pkl')
-    #clf = joblib.load('randomforestregressor.pkl')
+    joblib.dump(clf, './'+results+'/rte.pkl')
+    #clf = joblib.load('results/randomforestclassifier_rte_wnw2v_sick.pkl')
 
     return clf
+
+def deep_forest(X_train, y_train, X_test, y_test):
+    mgc_forest = MGCForest(
+        estimators_config={
+            'mgs': [{
+                'estimator_class': ExtraTreesClassifier,
+                'estimator_params': {
+                    'n_estimators': 200,
+                    'min_samples_split': 2,
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestClassifier,
+                'estimator_params': {
+                    'n_estimators': 200,
+                    'min_samples_split': 2,
+                    'n_jobs': -1,
+                }
+            }],
+            'cascade': [{
+                'estimator_class': ExtraTreesClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': ExtraTreesClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }]
+        },
+        stride_ratios=[1.0 / 4, 1.0 / 9, 1.0 / 16],
+    )
+    mgc_forest.fit(X_train, y_train.astype(np.uint8))
+
+    return mgc_forest
 
 def get_features(line):
     print("sick_id:{0}".format(line[0]))
@@ -175,8 +220,7 @@ def get_features(line):
     ]   
     return features
 
-
-def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None):
+def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None):
     if recalc:
         # Extract training features and targets
         print ('Feature extraction (train)...')
@@ -187,7 +231,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
         print ('Feature extraction (trial)...')
         trial_sources = np.array([get_features(line) for line in sick_test])
         trial_targets = np.array([float(line[1]) for line in sick_test])
-        
+
         # Save SICK ID
         train_id = np.array([line[0] for line in sick_train])
         trial_id = np.array([line[0] for line in sick_test])
@@ -201,106 +245,54 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./results/features_np.pickle', 'rb') as in_f:
+        with open('./'+results+'/features_np.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
-            if len(train) == 0:
-                nums = train[0].split(":")
-                train_sources = train_sources[:, int(nums[0]):int(nums[1])]
-            else:
-                for i, t in enumerate(train):
-                    nums = t.split(":")
-                    if i == 0:
-                        train_sources_new = train_sources[:, int(nums[0]):int(nums[1])]
-                    else:
-                        train_sources_new = np.hstack((train_sources_new, train_sources[:, int(nums[0]):int(nums[1])]))
-                train_sources = train_sources_new
+            #train_sources = np.hstack((train_sources[:, 0:15], train_sources[:, 22:23], train_sources[:, 30:54]))
+            #train_sources = train_sources[:, 6:54]
             train_targets = np.load(in_f)
             trial_sources = np.load(in_f)
-            if len(trial) == 0:
-                nums = trial[0].split(":")
-                trial_sources = trial_sources[:, int(nums[0]):int(nums[1])]
-            else:
-                for i, t in enumerate(trial):
-                    nums = t.split(":")
-                    if i == 0:
-                        trial_sources_new = trial_sources[:, int(nums[0]):int(nums[1])]
-                    else:
-                        trial_sources_new = np.hstack((trial_sources_new, trial_sources[:, int(nums[0]):int(nums[1])]))
-                trial_sources = trial_sources_new
+            #trial_sources = np.hstack((trial_sources[:, 0:15], trial_sources[:, 22:23], trial_sources[:, 30:54]))
+            #trial_sources = trial_sources[:, 6:54]
             trial_targets = np.load(in_f)
             train_id = np.load(in_f)
             trial_id = np.load(in_f)
-    return train_sources, train_targets, trial_sources, trial_targets
+        train_targets = load_rte(train_id)
+        trial_targets = load_rte(trial_id)
+    return train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id
 
-def plot_deviation(outputs, actual):
-    plt.figure(figsize=(12, 6))
-    plt.subplot(1, 2, 1)
-    plt.title('Comparison')
-
-    zipped = sorted(zip(outputs, actual), key=lambda x: x[1])
-    outputs = [i[0] for i in zipped]
-    actual = [i[1] for i in zipped]
-
-
-    plt.plot(np.arange(len(outputs)) + 1, outputs, 'b.', 
-        label='Predicted values')
-    plt.plot(np.arange(len(outputs)) + 1, actual, 'r-', 
-        label='Actual values')
-
-    plt.legend(loc='upper left')
-    plt.xlabel('Sentence no.')
-    plt.ylabel('Relatedness')
-
-    plt.savefig('./results/result.png', bbox_inches='tight')
-
-def write_for_evaluation(outputs, sick_ids, trial_targets, name):
-    with open('./results/'+name+'_all_result.txt', 'w') as out_f:
-        out_f.write('pair_ID\tentailment_judgment\trelatedness_score\tcorrect_answer\n')
+def write_for_evaluation(outputs, sick_ids, trial_targets, results):
+    """
+    Write test results to a file conforming to what is expected
+    by the provided R script.
+    """
+    with open('./'+results+'/all_result_rte.txt', 'w') as out_f:
+        out_f.write('pair_ID\tentailment_judgment\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
-            # Fix that predictions are sometimes out of range
-            if data > 5.0:
-                data = 5.0
-            elif data < 1.0:
-                data = 1.0
-            if os.path.isfile('./plain/sick_test_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_test_'+sick_ids[i]+'.answer', 'r')
-                entailment = j.readlines()[0].strip()
-                j.close()
-                out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
-            elif os.path.isfile('./plain/sick_train_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_train_'+sick_ids[i]+'.answer', 'r')
-                entailment = j.readlines()[0].strip()
-                j.close()
-                out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
-            elif os.path.isfile('./plain/sick_trial_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_trial_'+sick_ids[i]+'.answer', 'r')
-                entailment = j.readlines()[0].strip()
-                j.close()
-                out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
+            out_f.write('{0}\t{1}\t{2}\n'.format(sick_ids[i], data, trial_targets[i]))
 
-
-def output_errors(outputs, gold, sick_ids, sick_sentences, name):
-    with open('./results/'+name+'_error_result.txt', 'w') as out_f:
-        out_f.write('pair_ID\tdiff\tpred\tcorr\tsentence1\tsentence2\n')
+def output_errors(outputs, sick_ids, trial_targets, results):
+    """
+    For each item with an absolute error > 1.0,
+    print the item to an error file for further analysis.
+    """
+    with open('./'+results+'/error_result_rte.txt', 'w') as out_f:
+        out_f.write('pair_ID\tpred\tcorr\n')
         errs = []
         for i, line in enumerate(outputs):
             data = line
-            corr = gold[i]
-            diff = abs(data-corr)
-            if diff > 0.75:
-                errs.append([sick_ids[i], round(diff, 1), round(data, 1), corr, sick_sentences[i][0], sick_sentences[i][1]])
-
-        errs.sort(key=lambda x:-x[1])
+            corr = trial_targets[i]
+            if data != corr:
+                errs.append([sick_ids[i], data, corr])
 
         for line in errs:
-            out_f.write('{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n'.format(*line))
+            out_f.write('{0}\t{1}\t{2}\n'.format(*line))
 
 
 
-def load_sick_data_from(sick_id, kind):
+def load_sick_data_from(sick_id, kind, results):
     line = []
-    print(kind, sick_id)
+    #print('sick_id:{0}'.format(sick_id))
     line.append(sick_id)
     f = open('./plain2/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
     line.append(f.readlines()[0].strip())
@@ -311,19 +303,17 @@ def load_sick_data_from(sick_id, kind):
     line.append(texts[0].strip())
     line.append(texts[1].strip())
     g.close()
-    if os.path.exists('./results/sick_'+kind.lower()+'_'+sick_id+'.answer'):
-        h = open('./results/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
-        result = h.readlines()
-        if result and not re.search("coq_error", result[0]) and not "unknown\n" in result:
-            results = result[0].split(",")
-            for r in results:
-                r = r.strip("[] \n")
-                line.append(r)
-        else:
-            return None
-        h.close()
+
+    h = open('./'+results+'/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
+    result = h.readlines()
+    if result and not re.search("coq_error", result[0]) and not "unknown\n" in result:
+        results = result[0].split(",")
+        for r in results:
+            r = r.strip("[] \n")
+            line.append(r)
     else:
         return None
+    h.close()
 
     i = open('./plain/sick_'+kind.lower()+'_'+sick_id+'.tok', 'r')
     texts = i.readlines()
@@ -331,7 +321,7 @@ def load_sick_data_from(sick_id, kind):
     line.append(texts[1].strip())
     i.close()
 
-    j = open('./en/models/sick.mapping_costs.new.txt')
+    j = open('./sick_feats/sick.mapping_costs.txt')
     scores = j.readlines()
     for score in scores:
         if re.search('^plain/sick_'+kind.lower()+'_'+sick_id+'.txt', score):
@@ -343,82 +333,85 @@ def load_sick_data_from(sick_id, kind):
 
     return line
 
-def load_sick_data():
+def load_sick_data(results):
+    """
+    Attempt to load sick data from binary,
+    otherwise fall back to txt.
+    """
     sick_train, sick_test = [], []
-    for line in open('./en/SICK.semeval.txt'):
-        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TRAIN':
-            if load_sick_data_from(line.split('\t')[0], 'TRAIN') is not None:
-                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRAIN'))
-        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TRIAL':
-            if load_sick_data_from(line.split('\t')[0], 'TRIAL') is not None:
-                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRIAL'))
-        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TEST':
-            if load_sick_data_from(line.split('\t')[0], 'TEST') is not None:
-                sick_test.append(load_sick_data_from(line.split('\t')[0], 'TEST'))
-       # if len(sick_train) == 10:
-       #     break
+    for line in open('./en/data/sick/SICK.semeval.txt'):
+        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[11].strip() == 'TRAIN':
+            if load_sick_data_from(line.split('\t')[0], 'TRAIN', results) is not None:
+                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRAIN', results))
+        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[11].strip() == 'TRIAL':
+            if load_sick_data_from(line.split('\t')[0], 'TRIAL', results) is not None:
+                sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRIAL', results))
+        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[11].strip() == 'TEST':
+            if load_sick_data_from(line.split('\t')[0], 'TEST', results) is not None:
+                sick_test.append(load_sick_data_from(line.split('\t')[0], 'TEST', results))
+            #if len(sick_data) == 100:
+            #	break
+    #return sick_train
     return sick_train, sick_test
 
-## spearman correlation
-def spearman(x, y):
-    N = len(x)
-    return 1 - (6 * sum(x - y) ** 2) / float(N**3 - N)
-
-## root mean squared arror
-def rmse(x, y):
-    ## x:targets y:predictions
-    return np.sqrt(((y - x) ** 2).mean())
+def load_rte(sick_ids):
+    rte = []
+    entailment = ""
+    for sick_id in sick_ids:
+        if os.path.isfile('./plain/sick_test_'+sick_id+'.answer'):
+            g = open('./plain/sick_test_'+sick_id+'.answer', 'r')
+            entailment = g.readlines()[0].strip()
+            g.close()
+        elif os.path.isfile('./plain/sick_train_'+sick_id+'.answer'):
+            g = open('./plain/sick_train_'+sick_id+'.answer', 'r')
+            entailment = g.readlines()[0].strip()
+            g.close()
+        elif os.path.isfile('./plain/sick_trial_'+sick_id+'.answer'):
+            g = open('./plain/sick_trial_'+sick_id+'.answer', 'r')
+            entailment = g.readlines()[0].strip()
+            g.close()
+        if entailment == "yes":
+            rte.append(2)
+        elif entailment == "no":
+            rte.append(1)
+        else:
+            rte.append(0)
+    return rte
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--results", default="results")
+    args = parser.parse_args()
     # Load sick data
-    sick_train, sick_test = load_sick_data()
-    random.seed(23)
-    random.shuffle(sick_train)
-    random.shuffle(sick_test)
-    print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
+    #train_sources, train_targets, trial_sources, trial_targets = retrieve_features(1, sick_train, sick_test)
+    train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(None, None, None, args.results)
+    #print('train_sources:{0}, train_targets:{1}, trial_sources:{2}, trial_targets:{3}'.format(train_sources, train_targets, trial_sources, trial_targets))
 
+    # Train the regressor
+    clf = regression(train_sources, train_targets, trial_sources, trial_targets, args.results)
+    #if using deep forest
+    #clf = deep_forest(train_sources, train_targets, trial_sources, trial_targets)
 
-    g = open("./ablation.txt", "r")
-    commands = g.readlines()
-    g.close()
-    for command in commands:
-        lines = command.split("\t")
-        name = lines[0]
-        train = lines[1].strip().split(",")
-        trial = lines[2].strip().split(",")
-        # Get training and trial features
-        train_sources, train_targets, trial_sources, trial_targets = retrieve_features(train, trial)
+    # Cross validation
+    #mean, std = crossvalidation(clf, train_sources, train_targets)
+    #print("cross validation mean:{0}, std:{1}".format(mean, std))
 
-        # Train the regressor
-        clf = regression(train_sources, train_targets, trial_sources, trial_targets)
-
-        # Apply regressor to trial data
-        outputs = clf.predict(trial_sources)
-        trial_targets = np.array([float(line[1]) for line in sick_test])
-
-        # Evaluate regressor
-        write_for_evaluation(outputs, [line[0] for line in sick_test], trial_targets, name) #Outputs and sick_ids
-
-        # Check errors
-        output_errors(outputs, trial_targets, [line[0] for line in sick_test], [line[2:4] for line in sick_test], name) #Outputs and sick_ids
-
-        x = np.loadtxt(outputs, dtype=np.float32)
-        y = np.loadtxt(trial_targets, dtype=np.float32)
-        with open('./results/'+name+'_evaluation.txt', 'w') as eval_f:
-            ## pearson correlation
-            r, p = pearsonr(x, y)
-            eval_f.write('pearson correlation: {r}\n'.format(r=r))
-
-            ## spearman correlation
-            r, p = spearmanr(x, y)
-            eval_f.write('spearman correlation: {r}\n'.format(r=r))
-
-            ## mean squared error(rmse)
-            score = rmse(x, y)
-            eval_f.write('mean squared error:{0}\n'.format(score))
-        # Plot deviations
-        #plot_deviation(outputs, trial_targets)
+    # Apply regressor to trial data
+    outputs = clf.predict(trial_sources)
+    trial_targets = list(map(str, trial_targets))
+    outputs = list(map(str, list(outputs)))
+    f = open('./'+args.results+'/rte_report.txt', 'w')
+    f.write(classification_report(trial_targets, outputs, digits=5))
+    f.write(str(accuracy_score(trial_targets, outputs)))
+    f.close()
     
+    # Evaluate regressor
+    write_for_evaluation(outputs, trial_id, trial_targets, args.results) #Outputs and sick_ids
+
+    # Check errors
+    output_errors(outputs, trial_id, trial_targets, args.results) #Outputs and sick_ids
 
 if __name__ == '__main__':
     main()
+
+
