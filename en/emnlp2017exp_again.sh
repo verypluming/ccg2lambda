@@ -188,7 +188,7 @@ done
 dataset="test"
 for ff in ${plain_dir}/sick_${dataset}.files_??; do
   for f in `cat ${ff}`; do
-    ./en/similarity_en_mp_any_again.sh $f $templates $word2vec;
+    ./en/similarity_en_mp_any_again.sh $f $templates $word2vec $results_dir;
   done &
 done
 

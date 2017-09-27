@@ -37,7 +37,7 @@
 USAGE="Usage: ./similarity_en_mp_any.sh <sentences.txt> <semantic_templates.yaml>"
 
 # Check that the number of arguments is correct.
-if [ "$#" -ne 2 ]; then
+if [ "$#" -ne 3 ]; then
   echo "Error: Number of arguments invalid".
   echo $USAGE
   exit 1

@@ -188,19 +188,20 @@ def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, t
     if approx_simil_sorted[0][0] < threshold:
         return []
     best_pred = approx_simil_sorted[0][1]
-    best_args = pred_args.get('_' + best_pred, None)
-    trg_args = pred_args.get('_' + trg_pred, None)
-    str_trg_args = ' '.join(trg_args)
-    if re.search("\?", str_trg_args):
+    # future work
+    #best_args = pred_args.get('_' + best_pred, None)
+    #trg_args = pred_args.get('_' + trg_pred, None)
+    #str_trg_args = ' '.join(trg_args)
+    #if re.search("\?", str_trg_args):
         #if existential variables exists, assume premise's argument as subgoal's argument
-        trg_args = best_args
-        longest_args = best_args
-    else:
-        longest_args = best_args if len(best_args) >= len(trg_args) else trg_args
-    #axioms = ['Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
-    #          .format('approx', best_pred, trg_pred)]
-    axioms = ['Axiom ax_{0}_{1}_{2} : forall {3}, _{1} {4} -> _{2} {5}.'\
-        .format('approx', best_pred, trg_pred, ' '.join(longest_args), ' '.join(best_args), ' '.join(trg_args))]
+    #    trg_args = best_args
+    #    longest_args = best_args
+    #else:
+    #    longest_args = best_args if len(best_args) >= len(trg_args) else trg_args
+    axioms = ['Axiom ax_{0}_{1}_{2} : forall x, _{2} x.'\
+          .format('approx', best_pred, trg_pred)]
+    #axioms = ['Axiom ax_{0}_{1}_{2} : forall {3}, _{1} {4} -> _{2} {5}.'\
+    #    .format('approx', best_pred, trg_pred, ' '.join(longest_args), ' '.join(best_args), ' '.join(trg_args))]
 
     return axioms
 
