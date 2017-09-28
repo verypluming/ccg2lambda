@@ -164,9 +164,9 @@ def get_features(line, kind):
         float(feature_extraction.noun_overlap(line[0], kind)),                                       #45 Proportion of noun overlap
         float(feature_extraction.verb_overlap(line[0], kind)),                                       #46 Proportion of verb overlap
         float(feature_extraction.pred_overlap(line[0], kind)),                                       #47 Proportion of predicate overlap
-        float(feature_extraction.tfidf_msr(line[0], kind)),                                              #48 tfidf
-        float(feature_extraction.lsi_msr(line[0], kind)),                                                #49 LSI
-        float(feature_extraction.lda_msr(line[0], kind)),                                                #50 LDA
+        #float(feature_extraction.tfidf_msr(line[0], kind)),                                              #48 tfidf
+        #float(feature_extraction.lsi_msr(line[0], kind)),                                                #49 LSI
+        #float(feature_extraction.lda_msr(line[0], kind)),                                                #50 LDA
         float(feature_extraction.passive_overlap(line[0], kind)),                                    #52 passive overlap 2017/02/14
         float(feature_extraction.negation_overlap(line[0], kind)),                                   #53 negation overlap 2017/02/14
     ]   

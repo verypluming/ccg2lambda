@@ -194,7 +194,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
         trial_id = np.array([line[0] for line in sick_test])
 
         # Store to pickle for future reference
-        with open('./'+results+'/features_np.pickle', 'wb') as out_f:
+        with open('./'+results+'/all/features_np.pickle', 'wb') as out_f:
             np.save(out_f, train_sources)
             np.save(out_f, train_targets)
             np.save(out_f, trial_sources)

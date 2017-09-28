@@ -201,7 +201,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./results/features_np.pickle', 'rb') as in_f:
+        with open('./results/all/features_np.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             if len(train) == 0:
                 nums = train[0].split(":")

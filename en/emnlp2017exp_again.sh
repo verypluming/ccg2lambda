@@ -192,6 +192,24 @@ for ff in ${plain_dir}/sick_${dataset}.files_??; do
   done &
 done
 
+# Wait for the parallel processes to finish.
+wait
+ 
+total=0
+correct=0
+for f in ./${plain_dir2}/sick_${dataset}_*.answer; do
+  let total++
+  base_filename=${f##*/}
+  sys_filename=./${results_dir}/${base_filename}
+  gold_answer=`head -1 $f`
+  if [ ! -e ${sys_filename} ]; then
+    sys_answer="unknown"
+  else
+    sys_answer=`head -1 ${sys_filename}`
+  fi
+  echo -e $f"\t"$gold_answer"\t"$sys_answer
+done
+
 # Print a summary (precision, recall, f-score) of the errors at individual problems,
 # per problem category and a global score.
 echo "Evaluating."

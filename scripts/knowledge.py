@@ -153,7 +153,7 @@ def create_copy_axioms(relations_to_pairs, relation='copy'):
             axioms.append(axiom)
     return axioms
 
-def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, threshold=0.3):
+def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, threshold=0.25):
     #threshold is default=0.8, in paper=0.4, for similarity=0
     if pred_args is None:
         pred_args = defaultdict(lambda: ['x'])
