@@ -58,8 +58,8 @@ def extract_pred_features(sub_pred, prem_preds):
     prem_pred_cand = {}
     for prem_pred in prem_preds:
         wordnetsim = calc_wordnetsim(sub_pred, prem_pred)
-        #word2vecsim = calc_word2vecsim(sub_pred, prem_pred)
-        word2vecsim = 0
+        word2vecsim = calc_word2vecsim(sub_pred, prem_pred)
+        #word2vecsim = 0
         ngramsim = calc_ngramsim(sub_pred, prem_pred)
         prem_pred_cand[prem_pred] = [wordnetsim, word2vecsim, ngramsim]
     return prem_pred_cand
@@ -86,66 +86,68 @@ def extract_arg_features(sub_arg, prem_infos):
     return prem_arg_cand
 
 j = open("phrasecand.txt", "w")
-for filename in glob.glob("./results/sick_trial_*.candc.err"):
-    fileid = re.search("./results/(.*).candc.err", filename).group(1)
-    print(fileid)
-    rawfile = open(filename, "r")
-    infos = rawfile.readlines()
-    rawfile.close()
+datasets = ["trial", "train"]
+for dataset in datasets:
+    for filename in glob.glob("./results/sick_trial_*.candc.err"):
+        fileid = re.search("./results/(.*).candc.err", filename).group(1)
+        print(fileid)
+        rawfile = open(filename, "r")
+        infos = rawfile.readlines()
+        rawfile.close()
     
-    f = open("./plain/"+fileid+".answer", "r")
-    rte = f.readlines()[0].strip()
-    f.close()
-    if rte == "yes":
-        rte_f = 1
-    elif rte == "no":
-        rte_f = 0.5
-    elif rte == "unknown":
-        rte_f = 0
+        f = open("./plain/"+fileid+".answer", "r")
+        rte = f.readlines()[0].strip()
+        f.close()
+        if rte == "yes":
+            rte_f = 1
+        elif rte == "no":
+            rte_f = 0.5
+        elif rte == "unknown":
+            rte_f = 0
     
-    g = open("./plain2/"+fileid+".answer", "r")
-    similarity = float(g.readlines()[0].strip())
-    g.close()
-    norm_sim = float((similarity - 1) / (5 - 1))
+        g = open("./plain2/"+fileid+".answer", "r")
+        similarity = float(g.readlines()[0].strip())
+        g.close()
+        norm_sim = float((similarity - 1) / (5 - 1))
     
-    stopwords = ["Entity", "Event", "True", "False", "Prop"]
-    for i in infos:
-        try:
-            info = json.loads(i)
-        except ValueError:
-            continue
-        if "raw sub-goal" not in info:
-            continue
-        sub_info = info["raw sub-goal"].split()
-        if "=" in sub_info:
-            #ignore relation sub-goals temporarily
-            continue
-        sub_arg = sub_info[1:]
-        sub_pred = info["unproved sub-goal"]
-        if sub_pred in stopwords:
-            continue
-    
-        prem_infos = info["raw premises"]
-        prem_preds = info["all premises"]
-    
-        prem_pred_cand = extract_pred_features(sub_pred, prem_preds)
-        prem_arg_cand = extract_arg_features(sub_arg, prem_infos)
-            
-        best_features = [1,1,1,1,1,1]
-        dist = {}
-        for prem_pred in prem_preds:
-            features = []
+        stopwords = ["Entity", "Event", "True", "False", "Prop"]
+        for i in infos:
             try:
-                features.extend(prem_pred_cand[prem_pred])
-                features.append(prem_arg_cand[prem_pred])
-            except:
+                info = json.loads(i)
+            except ValueError:
                 continue
-            features.append(rte_f)
-            features.append(norm_sim)
-            dist[prem_pred] = distance.cityblock(best_features, features)
-            #print(sub_pred, prem_pred, dist[prem_pred])
-        if len(dist) > 0:
-            j.write("{0}, {1}, {2}, {3}\n".format(fileid, sub_pred, min(dist.items(), key=lambda x:x[1])[0], min(dist.values())))
+            if "raw sub-goal" not in info:
+                continue
+            sub_info = info["raw sub-goal"].split()
+            if "=" in sub_info:
+                #ignore relation sub-goals temporarily
+                continue
+            sub_arg = sub_info[1:]
+            sub_pred = info["unproved sub-goal"]
+            if sub_pred in stopwords:
+                continue
+    
+            prem_infos = info["raw premises"]
+            prem_preds = info["all premises"]
+    
+            prem_pred_cand = extract_pred_features(sub_pred, prem_preds)
+            prem_arg_cand = extract_arg_features(sub_arg, prem_infos)
+            
+            best_features = [1,1,1,1,1,1]
+            dist = {}
+            for prem_pred in prem_preds:
+                features = []
+                try:
+                    features.extend(prem_pred_cand[prem_pred])
+                    features.append(prem_arg_cand[prem_pred])
+                except:
+                    continue
+                features.append(rte_f)
+                features.append(norm_sim)
+                dist[prem_pred] = distance.cityblock(best_features, features)
+                #print(sub_pred, prem_pred, dist[prem_pred])
+            if len(dist) > 0:
+                j.write("{0}, {1}, {2}, {3}\n".format(fileid, sub_pred, min(dist.items(), key=lambda x:x[1])[0], min(dist.values())))
 
 j.close()
 
