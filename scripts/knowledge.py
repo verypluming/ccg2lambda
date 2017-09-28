@@ -198,7 +198,7 @@ def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, t
     #    longest_args = best_args
     #else:
     #    longest_args = best_args if len(best_args) >= len(trg_args) else trg_args
-    axioms = ['Axiom ax_{0}_{1}_{2} : forall x, _{2} x.'\
+    axioms = ['Axiom ax_{0}_{1}_{2} : forall x, _{1] x -> _{2} x.'\
           .format('approx', best_pred, trg_pred)]
     #axioms = ['Axiom ax_{0}_{1}_{2} : forall {3}, _{1} {4} -> _{2} {5}.'\
     #    .format('approx', best_pred, trg_pred, ' '.join(longest_args), ' '.join(best_args), ' '.join(trg_args))]
