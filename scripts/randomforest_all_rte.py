@@ -398,7 +398,7 @@ def main():
     trial_targets = list(map(str, trial_targets))
     outputs = list(map(str, list(outputs)))
     f = open("./results/rte_report.txt", "w")
-    f.write(classification_report(trial_targets, outputs, digits=5))
+    f.write(classification_report(trial_targets, outputs, digits=4))
     f.write(str(accuracy_score(trial_targets, outputs)))
     f.close()
     

@@ -289,3 +289,4 @@ python scripts/randomforest_all_again.py --results $results_dir
 python scripts/randomforest_all_rte_again.py --results $results_dir
 python scripts/ablation.py
 python scripts/ablation_rte.py
+python scripts/evaluate_everyscore.py --results $results_dir

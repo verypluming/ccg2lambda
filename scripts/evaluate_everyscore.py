@@ -72,7 +72,7 @@ def main():
         r1, p1 = pearsonr(x, y)
         r2, p2 = spearmanr(x, y)
         r3 = rmse(x, y)
-        f.write("{0}< i <={1} pearson:{2}, spearman:{3}, msr:{4}\n".format(i, i+1, r1, r2, r3))
+        f.write("{0}<i<={1} pearson: {2} spearman: {3} msr: {4}\n".format(i, i+1, r1, r2, r3))
     f.close()
 
 

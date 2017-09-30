@@ -457,7 +457,7 @@ def main():
         trial_targets = np.array([float(line[1]) for line in sick_test])
         outputs = list(map(str, list(outputs)))
         f = open('./results/'+name+'_rte_report.txt', 'w')
-        f.write(classification_report(trial_targets, outputs, digits=5))
+        f.write(classification_report(trial_targets, outputs, digits=4))
         f.write(str(accuracy_score(trial_targets, outputs)))
         f.close()
 
