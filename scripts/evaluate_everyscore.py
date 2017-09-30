@@ -28,13 +28,14 @@ from matplotlib.backends.backend_pdf import *
 #from sklearn.pipeline import make_pipeline
 #from sklearn import preprocessing
 #from sklearn.grid_search import GridSearchCV
+import argparse
 
 def rmse(x, y):
     ## x:targets y:predictions
     return np.sqrt(((y - x) ** 2).mean())
 
 def load_pickle(results):
-    with open('./'+results+'/features_np.pickle', 'rb') as in_f:
+    with open('./'+results+'/all/features_np.pickle', 'rb') as in_f:
         train_sources = np.load(in_f)
         train_targets = np.load(in_f)
         trial_sources = np.load(in_f)
@@ -52,6 +53,7 @@ def main():
     train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = load_pickle(args.results)
     trial_targets2 = [] #similarity_score
     for line in trial_id:
+        #print(line)
         f = open('./plain2/sick_test_'+line+'.answer', 'r')
         score = f.readlines()[0].strip()
         trial_targets2.append(float(score))
@@ -60,7 +62,7 @@ def main():
     trial_sources = np.c_[trial_sources, trial_targets2]
 
     f = open('./'+args.results+'/evaluate_eachscore.txt', 'w')
-    for i in range(1, 4):
+    for i in range(1, 5):
         lows, cols = np.where((trial_sources[:, 72:73]>i)&(trial_sources[:, 72:73]<=i+1))
         trial_sources_eval = trial_sources[lows,0:72]
         outputs = clf.predict(trial_sources_eval)

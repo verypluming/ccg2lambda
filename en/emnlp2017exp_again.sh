@@ -288,3 +288,4 @@ fi
 python scripts/randomforest_all_again.py --results $results_dir
 python scripts/randomforest_all_rte_again.py --results $results_dir
 python scripts/ablation.py
+python scripts/ablation_rte.py

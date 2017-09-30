@@ -37,11 +37,11 @@
 USAGE="Usage: ./similarity_en_mp_any.sh <sentences.txt> <semantic_templates.yaml>"
 
 # Check that the number of arguments is correct.
-if [ "$#" -ne 3 ]; then
-  echo "Error: Number of arguments invalid".
-  echo $USAGE
-  exit 1
-fi
+#if [ "$#" -ne 3 ]; then
+#  echo "Error: Number of arguments invalid".
+#  echo $USAGE
+#  exit 1
+#fi
 
 # This variable contains the filename where the category templates are.
 category_templates=$2

@@ -20,9 +20,11 @@ import os
 import numpy as np
 import scipy as sp
 from scipy.stats import pearsonr, spearmanr
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, ExtraTreesClassifier, ExtraTreesRegressor
 from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import mean_squared_error, classification_report
+from sklearn.metrics import mean_squared_error, classification_report, accuracy_score, f1_score
+from deep_forest import MGCForest
+import uuid
 import sys
 import matplotlib.pyplot as plt
 import random
@@ -35,7 +37,6 @@ from sklearn import linear_model
 from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
 import re
-
 
 from sklearn.cross_validation import cross_val_score
 
@@ -56,7 +57,7 @@ def regression(X_train, y_train, X_test, y_test):
     clf = make_pipeline(
         preprocessing.StandardScaler(),
         #preprocessing.MinMaxScaler(),
-        GridSearchCV(RandomForestRegressor(), parameters))
+        GridSearchCV(RandomForestClassifier(), parameters))
     clf.fit(X_train, y_train)
 
     #Serialize
@@ -64,6 +65,64 @@ def regression(X_train, y_train, X_test, y_test):
     #clf = joblib.load('randomforestregressor.pkl')
 
     return clf
+
+def deep_forest(X_train, y_train, X_test, y_test):
+    mgc_forest = MGCForest(
+        estimators_config={
+            'mgs': [{
+                'estimator_class': ExtraTreesClassifier,
+                'estimator_params': {
+                    'n_estimators': 200,
+                    'min_samples_split': 2,
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestClassifier,
+                'estimator_params': {
+                    'n_estimators': 200,
+                    'min_samples_split': 2,
+                    'n_jobs': -1,
+                }
+            }],
+            'cascade': [{
+                'estimator_class': ExtraTreesClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': ExtraTreesClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestClassifier,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }]
+        },
+        stride_ratios=[1.0 / 4, 1.0 / 9, 1.0 / 16],
+    )
+    mgc_forest.fit(X_train, y_train.astype(np.uint8))
+
+    return mgc_forest
 
 def get_features(line):
     print("sick_id:{0}".format(line[0]))
@@ -230,6 +289,8 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             trial_targets = np.load(in_f)
             train_id = np.load(in_f)
             trial_id = np.load(in_f)
+        train_targets = load_rte(train_id)
+        trial_targets = load_rte(trial_id)
     return train_sources, train_targets, trial_sources, trial_targets
 
 def plot_deviation(outputs, actual):
@@ -254,49 +315,24 @@ def plot_deviation(outputs, actual):
     plt.savefig('./results/result.png', bbox_inches='tight')
 
 def write_for_evaluation(outputs, sick_ids, trial_targets, name):
-    with open('./results/'+name+'_all_result.txt', 'w') as out_f:
-        out_f.write('pair_ID\tentailment_judgment\trelatedness_score\tcorrect_answer\n')
+    with open('./results/'+name+'_all_result_rte.txt', 'w') as out_f:
+        out_f.write('pair_ID\tentailment_judgment\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
-            # Fix that predictions are sometimes out of range
-            if data > 5.0:
-                data = 5.0
-            elif data < 1.0:
-                data = 1.0
-            if os.path.isfile('./plain/sick_test_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_test_'+sick_ids[i]+'.answer', 'r')
-                entailment = j.readlines()[0].strip()
-                j.close()
-                out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
-            elif os.path.isfile('./plain/sick_train_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_train_'+sick_ids[i]+'.answer', 'r')
-                entailment = j.readlines()[0].strip()
-                j.close()
-                out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
-            elif os.path.isfile('./plain/sick_trial_'+sick_ids[i]+'.answer'):
-                j = open('./plain/sick_trial_'+sick_ids[i]+'.answer', 'r')
-                entailment = j.readlines()[0].strip()
-                j.close()
-                out_f.write('{0}\t{1}\t{2}\t{3}\n'.format(sick_ids[i], entailment, data, trial_targets[i]))
+            out_f.write('{0}\t{1}\t{2}\n'.format(sick_ids[i], data, trial_targets[i]))
 
-
-def output_errors(outputs, gold, sick_ids, sick_sentences, name):
-    with open('./results/'+name+'_error_result.txt', 'w') as out_f:
-        out_f.write('pair_ID\tdiff\tpred\tcorr\tsentence1\tsentence2\n')
+def output_errors(outputs, sick_ids, trial_targets, name):
+    with open('./results/'+name+'_error_result_rte.txt', 'w') as out_f:
+        out_f.write('pair_ID\tpred\tcorr\n')
         errs = []
         for i, line in enumerate(outputs):
             data = line
-            corr = gold[i]
-            diff = abs(data-corr)
-            if diff > 0.75:
-                errs.append([sick_ids[i], round(diff, 1), round(data, 1), corr, sick_sentences[i][0], sick_sentences[i][1]])
-
-        errs.sort(key=lambda x:-x[1])
+            corr = trial_targets[i]
+            if data != corr:
+                errs.append([sick_ids[i], data, corr])
 
         for line in errs:
-            out_f.write('{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n'.format(*line))
-
-
+            out_f.write('{0}\t{1}\t{2}\n'.format(*line))
 
 def load_sick_data_from(sick_id, kind):
     line = []
@@ -359,6 +395,30 @@ def load_sick_data():
        #     break
     return sick_train, sick_test
 
+def load_rte(sick_ids):
+    rte = []
+    entailment = ""
+    for sick_id in sick_ids:
+        if os.path.isfile('./plain/sick_test_'+sick_id+'.answer'):
+            g = open('./plain/sick_test_'+sick_id+'.answer', 'r')
+            entailment = g.readlines()[0].strip()
+            g.close()
+        elif os.path.isfile('./plain/sick_train_'+sick_id+'.answer'):
+            g = open('./plain/sick_train_'+sick_id+'.answer', 'r')
+            entailment = g.readlines()[0].strip()
+            g.close()
+        elif os.path.isfile('./plain/sick_trial_'+sick_id+'.answer'):
+            g = open('./plain/sick_trial_'+sick_id+'.answer', 'r')
+            entailment = g.readlines()[0].strip()
+            g.close()
+        if entailment == "yes":
+            rte.append(2)
+        elif entailment == "no":
+            rte.append(1)
+        else:
+            rte.append(0)
+    return rte
+
 ## spearman correlation
 def spearman(x, y):
     N = len(x)
@@ -395,29 +455,17 @@ def main():
         # Apply regressor to trial data
         outputs = clf.predict(trial_sources)
         trial_targets = np.array([float(line[1]) for line in sick_test])
+        outputs = list(map(str, list(outputs)))
+        f = open('./results/'+name+'_rte_report.txt', 'w')
+        f.write(classification_report(trial_targets, outputs, digits=5))
+        f.write(str(accuracy_score(trial_targets, outputs)))
+        f.close()
 
         # Evaluate regressor
-        write_for_evaluation(outputs, [line[0] for line in sick_test], trial_targets, name) #Outputs and sick_ids
+        write_for_evaluation(outputs, trial_id, trial_targets, name) #Outputs and sick_ids
 
         # Check errors
-        output_errors(outputs, trial_targets, [line[0] for line in sick_test], [line[2:4] for line in sick_test], name) #Outputs and sick_ids
-
-        x = np.loadtxt(outputs, dtype=np.float32)
-        y = np.loadtxt(trial_targets, dtype=np.float32)
-        with open('./results/'+name+'_evaluation.txt', 'w') as eval_f:
-            ## pearson correlation
-            r, p = pearsonr(x, y)
-            eval_f.write('pearson: {r}\n'.format(r=r))
-
-            ## spearman correlation
-            r, p = spearmanr(x, y)
-            eval_f.write('spearman: {r}\n'.format(r=r))
-
-            ## mean squared error(rmse)
-            score = rmse(x, y)
-            eval_f.write('msr: {0}\n'.format(score))
-        # Plot deviations
-        #plot_deviation(outputs, trial_targets)
+        output_errors(outputs, trial_id, trial_targets, name) #Outputs and sick_ids
     
 
 if __name__ == '__main__':
