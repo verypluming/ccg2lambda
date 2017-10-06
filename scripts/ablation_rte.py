@@ -50,7 +50,7 @@ def regression(X_train, y_train, X_test, y_test):
         'random_state'      : [0],
         'n_jobs'            : [200],
         'max_features'      : ['auto', 'log2', 'sqrt', None],
-        'criterion'         : ['mse'],
+        'criterion'         : ['gini'],
         'max_depth'         : [3, 5, 10, 20, 30, 40, 50, 100]
     }
 
@@ -260,9 +260,9 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./results/all/features_np.pickle', 'rb') as in_f:
+        with open('./results_20170921_WN/all/features_np_again.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
-            if len(train) == 0:
+            if len(train) == 1:
                 nums = train[0].split(":")
                 train_sources = train_sources[:, int(nums[0]):int(nums[1])]
             else:
@@ -275,7 +275,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
                 train_sources = train_sources_new
             train_targets = np.load(in_f)
             trial_sources = np.load(in_f)
-            if len(trial) == 0:
+            if len(trial) == 1:
                 nums = trial[0].split(":")
                 trial_sources = trial_sources[:, int(nums[0]):int(nums[1])]
             else:
@@ -291,7 +291,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             trial_id = np.load(in_f)
         train_targets = load_rte(train_id)
         trial_targets = load_rte(trial_id)
-    return train_sources, train_targets, trial_sources, trial_targets
+    return train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id
 
 def plot_deviation(outputs, actual):
     plt.figure(figsize=(12, 6))
@@ -315,14 +315,14 @@ def plot_deviation(outputs, actual):
     plt.savefig('./results/result.png', bbox_inches='tight')
 
 def write_for_evaluation(outputs, sick_ids, trial_targets, name):
-    with open('./results/'+name+'_all_result_rte.txt', 'w') as out_f:
+    with open('./results_20170921_WN/'+name+'_all_result_rte.txt', 'w') as out_f:
         out_f.write('pair_ID\tentailment_judgment\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
             out_f.write('{0}\t{1}\t{2}\n'.format(sick_ids[i], data, trial_targets[i]))
 
 def output_errors(outputs, sick_ids, trial_targets, name):
-    with open('./results/'+name+'_error_result_rte.txt', 'w') as out_f:
+    with open('./results_20170921_WN/'+name+'_error_result_rte.txt', 'w') as out_f:
         out_f.write('pair_ID\tpred\tcorr\n')
         errs = []
         for i, line in enumerate(outputs):
@@ -347,8 +347,8 @@ def load_sick_data_from(sick_id, kind):
     line.append(texts[0].strip())
     line.append(texts[1].strip())
     g.close()
-    if os.path.exists('./results/sick_'+kind.lower()+'_'+sick_id+'.answer'):
-        h = open('./results/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
+    if os.path.exists('./results_20170921_WN/sick_'+kind.lower()+'_'+sick_id+'.answer'):
+        h = open('./results_20170921_WN/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
         result = h.readlines()
         if result and not re.search("coq_error", result[0]) and not "unknown\n" in result:
             results = result[0].split(",")
@@ -431,32 +431,35 @@ def rmse(x, y):
 
 def main():
     # Load sick data
-    sick_train, sick_test = load_sick_data()
-    random.seed(23)
-    random.shuffle(sick_train)
-    random.shuffle(sick_test)
-    print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
+    #sick_train, sick_test = load_sick_data()
+    #random.seed(23)
+    #random.shuffle(sick_train)
+    #random.shuffle(sick_test)
+    #print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
 
 
     g = open("./ablation.txt", "r")
     commands = g.readlines()
     g.close()
     for command in commands:
-        lines = command.split("\t")
+        train, trial = [], []
+        command = command.strip()
+        lines = command.split(" ")
         name = lines[0]
-        train = lines[1].strip().split(",")
-        trial = lines[2].strip().split(",")
+        if re.search("\,", lines[1]):
+       	    train = [i for i in re.split(r',',lines[1]) if i != '']
+            trial = [i for i in re.split(r',',lines[2]) if i != '']
         # Get training and trial features
-        train_sources, train_targets, trial_sources, trial_targets = retrieve_features(train, trial)
+        train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(train, trial)
 
         # Train the regressor
         clf = regression(train_sources, train_targets, trial_sources, trial_targets)
 
         # Apply regressor to trial data
         outputs = clf.predict(trial_sources)
-        trial_targets = np.array([float(line[1]) for line in sick_test])
+        trial_targets = list(map(str, trial_targets)) 
         outputs = list(map(str, list(outputs)))
-        f = open('./results/'+name+'_rte_report.txt', 'w')
+        f = open('./results_20170921_WN/'+name+'_rte_report.txt', 'w')
         f.write(classification_report(trial_targets, outputs, digits=4))
         f.write(str(accuracy_score(trial_targets, outputs)))
         f.close()

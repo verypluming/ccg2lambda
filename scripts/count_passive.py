@@ -41,7 +41,7 @@ def passive_overlap(sick_id):
     if t_set or h_set:
         return 1
 
-with open('./results_20170924_WNW2V2/all/features_np_again.pickle', 'rb') as in_f:
+with open('./results_20170921_WN/all/features_np_again.pickle', 'rb') as in_f:
     train_sources = np.load(in_f)
     train_targets = np.load(in_f)
     #train_sources = np.hstack((train_sources[:, 54:61], train_sources[:, 62:65], train_sources[:, 66:71]))
@@ -53,9 +53,9 @@ with open('./results_20170924_WNW2V2/all/features_np_again.pickle', 'rb') as in_
     train_id = np.load(in_f)
     trial_id = np.load(in_f)
 
-f = open("passive_list.txt", "w")
+f = open("./results_20170921_WN/passive_list.txt", "w")
 for t in trial_id:
     if passive_overlap(t) == 1:
-        f.write(t)
+        f.write("{0}".format(t))
         f.write("\n")
 f.close()

@@ -201,9 +201,9 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./results/all/features_np.pickle', 'rb') as in_f:
+        with open('./results_20170921_WN/all/features_np_again.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
-            if len(train) == 0:
+            if len(train) == 1:
                 nums = train[0].split(":")
                 train_sources = train_sources[:, int(nums[0]):int(nums[1])]
             else:
@@ -216,7 +216,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
                 train_sources = train_sources_new
             train_targets = np.load(in_f)
             trial_sources = np.load(in_f)
-            if len(trial) == 0:
+            if len(trial) == 1:
                 nums = trial[0].split(":")
                 trial_sources = trial_sources[:, int(nums[0]):int(nums[1])]
             else:
@@ -254,7 +254,7 @@ def plot_deviation(outputs, actual):
     plt.savefig('./results/result.png', bbox_inches='tight')
 
 def write_for_evaluation(outputs, sick_ids, trial_targets, name):
-    with open('./results/'+name+'_all_result.txt', 'w') as out_f:
+    with open('./results_20170921_WN/'+name+'_all_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tentailment_judgment\trelatedness_score\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
@@ -281,7 +281,7 @@ def write_for_evaluation(outputs, sick_ids, trial_targets, name):
 
 
 def output_errors(outputs, gold, sick_ids, sick_sentences, name):
-    with open('./results/'+name+'_error_result.txt', 'w') as out_f:
+    with open('./results_20170921_WN/'+name+'_error_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tdiff\tpred\tcorr\tsentence1\tsentence2\n')
         errs = []
         for i, line in enumerate(outputs):
@@ -311,8 +311,8 @@ def load_sick_data_from(sick_id, kind):
     line.append(texts[0].strip())
     line.append(texts[1].strip())
     g.close()
-    if os.path.exists('./results/sick_'+kind.lower()+'_'+sick_id+'.answer'):
-        h = open('./results/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
+    if os.path.exists('./results_20170921_WN/sick_'+kind.lower()+'_'+sick_id+'.answer'):
+        h = open('./results_20170921_WN/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
         result = h.readlines()
         if result and not re.search("coq_error", result[0]) and not "unknown\n" in result:
             results = result[0].split(",")
@@ -382,10 +382,13 @@ def main():
     commands = g.readlines()
     g.close()
     for command in commands:
-        lines = command.split("\t")
+        train, trial = [], []
+        command = command.strip()
+        lines = command.split(" ")
         name = lines[0]
-        train = lines[1].strip().split(",")
-        trial = lines[2].strip().split(",")
+        if re.search("\,", lines[1]):
+            train = [i for i in re.split(r',',lines[1]) if i != '']
+            trial = [i for i in re.split(r',',lines[2]) if i != '']
         # Get training and trial features
         train_sources, train_targets, trial_sources, trial_targets = retrieve_features(train, trial)
 
@@ -404,7 +407,7 @@ def main():
 
         x = np.loadtxt(outputs, dtype=np.float32)
         y = np.loadtxt(trial_targets, dtype=np.float32)
-        with open('./results/'+name+'_evaluation.txt', 'w') as eval_f:
+        with open('./results_20170921_WN/'+name+'_evaluation.txt', 'w') as eval_f:
             ## pearson correlation
             r, p = pearsonr(x, y)
             eval_f.write('pearson: {r}\n'.format(r=r))

@@ -153,9 +153,9 @@ function select_answer() {
   base_fname1=`echo ${answer1_fname##*/} | sed 's/.answer//g'`
   base_fname2=`echo ${answer2_fname##*/} | sed 's/.answer//g'`
   base_fname3=`echo ${answer3_fname##*/} | sed 's/.answer//g'`
-  sentences_basename=${base_fname1/.candc/}
+  sentences_basename=${base_fname1/.depccg/}
   if [ ! -e $answer1_fname ] && [ ! -e $answer2_fname ] && [ ! -e $answer3_fname ]; then
-    echo "unknown" > ${answer1_fname/.candc/};
+    echo "unknown" > ${answer1_fname/.depccg/};
     prediction_fname=""
   elif [ ! -e $answer1_fname ] && [ ! -e $answer3_fname ]; then
     prediction_fname=$base_fname2
@@ -274,7 +274,7 @@ if [ ! -e "${results_dir}/${sentences_basename/.tok/.answer}" ]; then
   for parser_name in {candc,easyccg,depccg}; do
     if [ ! -e "${results_dir}/${sentences_basename}.${parser_name}.answer" ]; then
       if [ "$word2vec" == "word2vec" ]; then
-        timeout 600 python scripts/prove.py \
+        timeout 600 python scripts/prove_w2v.py \
           $parsed_dir/${sentences_basename}.${parser_name}.sem.xml \
           --graph_out ${results_dir}/${sentences_basename}.${parser_name}.html \
           --abduction \
@@ -299,8 +299,8 @@ if [ ! -e "${results_dir}/${sentences_basename/.tok/.answer}" ]; then
        awk '{printf("%.2f\n",$1)}'`
   echo $proving_time > ${results_dir}/${sentences_basename}.time
   select_answer \
+    ${results_dir}/${sentences_basename}.depccg.answer \
     ${results_dir}/${sentences_basename}.candc.answer \
-    ${results_dir}/${sentences_basename}.easyccg.answer \
-    ${results_dir}/${sentences_basename}.depccg.answer
+    ${results_dir}/${sentences_basename}.easyccg.answer
 fi
 echo "Judged entailment for $parsed_dir/${sentences_basename}.sem.xml "`cat ${results_dir}/${sentences_basename}.answer`

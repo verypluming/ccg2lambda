@@ -182,19 +182,20 @@ function select_answer() {
 
     #select candc, easyccg or depccg
     #accuracy: candc > depccg > easyccg
+    #parser accuracy: depccg > easyccg > candc
     answer_level1=("1" "0.5")
     answer_level2=("0" "coq_error" "unknown" "")
     answer_level3=("coq_error" "unknown" "")
     if `echo ${answer_level1[@]} | grep -q "$answer2"` && `echo ${answer_level2[@]} | grep -q "$answer1"` && `echo ${answer_level2[@]} | grep -q "$answer3"`; then
-        prediction_fname=$base_fname2 #easyccg
+        prediction_fname=$base_fname2 #candc
     elif [ "$answer2" == "0" ] && `echo ${answer_level3[@]} | grep -q "$answer1"` && `echo ${answer_level3[@]} | grep -q "$answer3"`; then
-        prediction_fname=$base_fname2 #easyccg
+        prediction_fname=$base_fname2 #candc
     elif `echo ${answer_level1[@]} | grep -q "$answer3"` && `echo ${answer_level2[@]} | grep -q "$answer1"`  && `echo ${answer_level2[@]} | grep -q "$answer2"`; then
-        prediction_fname=$base_fname3 #depccg
+        prediction_fname=$base_fname3 #easyccg
     elif [ "$answer3" == "0" ] && `echo ${answer_level3[@]} | grep -q "$answer1"` && `echo ${answer_level3[@]} | grep -q "$answer2"`; then
-        prediction_fname=$base_fname3 #depccg
+        prediction_fname=$base_fname3 #easyccg
     else
-        prediction_fname=$base_fname1 #candc
+        prediction_fname=$base_fname1 #depccg
     fi
     #if [ "$answer1" == "1" ] && [ "$answer2" == "0" ]; then
     #  prediction_fname=$base_fname1

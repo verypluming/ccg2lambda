@@ -43,11 +43,15 @@ def calc_wordnetsim(sub_pred, prem_pred):
     return wordnetsim
 
 def calc_word2vecsim(sub_pred, prem_pred):
+    word2vecsim = 0
     process = Popen(\
                 'curl http://localhost:5000/word2vec/similarity?w1='+ sub_pred +'\&w2='+ prem_pred, \
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     tmp = process.communicate()[0]
-    word2vecsim = float(tmp.decode())
+    try:
+        word2vecsim = float(tmp.decode())
+    except ValueError:
+        word2vecsim = 0
     return word2vecsim
 
 def calc_ngramsim(sub_pred, prem_pred):
@@ -85,10 +89,10 @@ def extract_arg_features(sub_arg, prem_infos):
             prem_arg_cand[prem_pred] = 0
     return prem_arg_cand
 
-j = open("phrasecand.txt", "w")
+j = open("/work1/t2g-17IAH/yanaka/verypluming/phrasecand_train.txt", "w")
 datasets = ["trial", "train"]
 for dataset in datasets:
-    for filename in glob.glob("./results/sick_trial_*.candc.err"):
+    for filename in glob.glob("./results/sick_"+dataset+"_*.candc.err"):
         fileid = re.search("./results/(.*).candc.err", filename).group(1)
         print(fileid)
         rawfile = open(filename, "r")
@@ -144,9 +148,11 @@ for dataset in datasets:
                     continue
                 features.append(rte_f)
                 features.append(norm_sim)
+                #print(features)
                 dist[prem_pred] = distance.cityblock(best_features, features)
                 #print(sub_pred, prem_pred, dist[prem_pred])
             if len(dist) > 0:
+                #print("{0}, {1}, {2}, {3}\n".format(fileid, sub_pred, min(dist.items(), key=lambda x:x[1])[0], min(dist.values())))
                 j.write("{0}, {1}, {2}, {3}\n".format(fileid, sub_pred, min(dist.items(), key=lambda x:x[1])[0], min(dist.values())))
 
 j.close()
