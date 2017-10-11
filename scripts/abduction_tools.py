@@ -369,10 +369,43 @@ def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script
         get_lexical_relations_from_preds(
             premise_preds, conclusion_pred, coq_script, pred_args)
     axioms.update(set(linguistic_axioms))
-    if not axioms:
-        approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
-        axioms.update(approx_axioms)
+    #search phrasal axioms
+    phrasal_axioms = \
+        get_phrasal_axioms(premise_preds, conclusion_pred)
+    print(phrasal_axioms)
+    axioms.update(set(phrasal_axioms))
+    #word2vec axioms
+    #if not axioms:
+    #    approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
+    #    axioms.update(approx_axioms)
     axioms = filter_wrong_axioms(axioms, coq_script)
+    return axioms
+
+try:
+    with open('en/phrasejson.json', 'r') as phr:
+        phrasecand = json.load(phr)
+except:
+    phrasecand = {}
+
+def search_phrases(src_pred, trg_pred):
+    if src_pred in phrasecand and trg_pred in phrasecand[src_pred]:
+        return True
+    elif trg_pred in phrasecand and src_pred in phrasecand[trg_pred]:
+        return True
+    else:
+        return False
+
+def get_phrasal_axioms(premise_preds, conclusion_pred):
+    axioms = []
+    src_preds = [denormalize_token(p) for p in premise_preds]
+    trg_pred = denormalize_token(conclusion_pred)
+    for src_pred in src_preds:
+        #print(src_pred, trg_pred, search_phrases(src_pred, trg_pred))
+        if search_phrases(src_pred, trg_pred):
+            #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
+            axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x.'\
+                    .format("phrase", src_pred, trg_pred)
+            axioms.append(axiom)
     return axioms
 
 
