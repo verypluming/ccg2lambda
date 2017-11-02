@@ -329,9 +329,16 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 else:
                     word2 = word_lines[3]
                 merge_axioms[word1].append("w2v "+word2)
-            elif re.search("ax_copy", coq_line) or re.search("ax_remove", coq_line) or re.search("ax_phrase", coq_line):
-                #copy, phrase level = calculate similarity as 1
-                continue
+            elif re.search("ax_copy", coq_line) or re.search("ax_phrase", coq_line):
+                #copy or phrase: calculate similarity as 1
+                #continue
+                word_lines = coq_line.split("_")
+                word1 = word_lines[2]
+                if not re.match('^[0-9]{1,}$', word_lines[3]):
+                    word2 = word_lines[3].strip()
+                else:
+                    word2 = word_lines[4].strip()
+                merge_axioms[word1].append("copy "+word2)
             else:
                 #wordnet  
                 word_lines = coq_line.split("_")
@@ -364,6 +371,10 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 pre_similarities.append(float(pre_similarity.decode()))
             elif dic == "wn":
                 pre_similarity = wordnet_similarity(pr, word)
+                pre_similarities.append(pre_similarity)
+            elif dic == "copy":
+                # copy or phrase: calculate similarity as 1
+                pre_similarity = 1
                 pre_similarities.append(pre_similarity)
         word_similarity += max(pre_similarities)
         axioms += 1
