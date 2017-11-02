@@ -15,7 +15,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-word2vec=$3
+word2vec=$4
 if [ "$word2vec" == "word2vec" ]; then
   ./word2vec.sh
 fi
@@ -33,7 +33,7 @@ templates=$2
 
 plain_dir=plain
 plain_dir2=plain2
-results_dir=$4
+results_dir=$3
 
 # Usage: 
 #
@@ -93,7 +93,7 @@ cp en/tactics_coq_sick.txt tactics_coq.txt
 for dataset in {trial,train}; do
   for ff in ${plain_dir}/sick_${dataset}.files_??; do
     for f in `cat ${ff}`; do
-      ./en/similarity_en_mp_any.sh $f $templates $word2vec;
+      ./en/similarity_en_mp_any.sh $f $templates $results_dir $word2vec;
     done &
   done
 
@@ -188,7 +188,7 @@ done
 dataset="test"
 for ff in ${plain_dir}/sick_${dataset}.files_??; do
   for f in `cat ${ff}`; do
-    ./en/similarity_en_mp_any_again.sh $f $templates $word2vec $results_dir;
+    ./en/similarity_en_mp_any_again.sh $f $templates $results_dir $word2vec;
   done &
 done
 

@@ -372,7 +372,6 @@ def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script
     #search phrasal axioms
     phrasal_axioms = \
         get_phrasal_axioms(premise_preds, conclusion_pred)
-    print(phrasal_axioms)
     axioms.update(set(phrasal_axioms))
     #word2vec axioms
     #if not axioms:

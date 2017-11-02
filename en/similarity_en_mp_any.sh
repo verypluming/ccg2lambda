@@ -62,7 +62,7 @@ if [ ! -f $sentences_fname ]; then
 fi
 
 #word2vec flag
-word2vec=$3
+word2vec=${4:-none}
 
 function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
 
@@ -70,7 +70,7 @@ function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
 # results will be written.
 plain_dir="plain" # tokenized sentences.
 parsed_dir="parsed" # parsed sentences into XML or other formats.
-results_dir="results" # HTML semantic outputs, proving results, etc.
+results_dir=$3 # HTML semantic outputs, proving results, etc.
 mkdir -p $plain_dir $parsed_dir $results_dir
 
 # Tokenize text with Penn Treebank tokenizer.
@@ -132,7 +132,7 @@ function parse_easyccg() {
     -model ${candc_dir}/models/ner \
     -ofmt "%w|%p|%n \n" \
     2>/dev/null | \
-  /usr/apps.sp3/nosupport/java/jre/bin/java -jar ${easyccg_dir}/easyccg.jar \
+  java -jar ${easyccg_dir}/easyccg.jar \
     --model ${easyccg_dir}/model \
     -i POSandNERtagged \
     -o extended \
@@ -181,48 +181,26 @@ function select_answer() {
     answer3=${answer3/\[}
 
     #select candc, easyccg or depccg
-    #accuracy: candc > depccg > easyccg
     #parser accuracy: depccg > easyccg > candc
-    answer_level1=("1" "0.5")
-    answer_level2=("0" "coq_error" "unknown" "")
-    answer_level3=("coq_error" "unknown" "")
-    if `echo ${answer_level1[@]} | grep -q "$answer2"` && `echo ${answer_level2[@]} | grep -q "$answer1"` && `echo ${answer_level2[@]} | grep -q "$answer3"`; then
-        prediction_fname=$base_fname2 #candc
-    elif [ "$answer2" == "0" ] && `echo ${answer_level3[@]} | grep -q "$answer1"` && `echo ${answer_level3[@]} | grep -q "$answer3"`; then
-        prediction_fname=$base_fname2 #candc
-    elif `echo ${answer_level1[@]} | grep -q "$answer3"` && `echo ${answer_level2[@]} | grep -q "$answer1"`  && `echo ${answer_level2[@]} | grep -q "$answer2"`; then
-        prediction_fname=$base_fname3 #easyccg
-    elif [ "$answer3" == "0" ] && `echo ${answer_level3[@]} | grep -q "$answer1"` && `echo ${answer_level3[@]} | grep -q "$answer2"`; then
-        prediction_fname=$base_fname3 #easyccg
-    else
-        prediction_fname=$base_fname1 #depccg
+    answer_level1=("1" "0.5");
+    answer_level2=("0" "coq_error" "unknown");
+    answer_level3=("coq_error" "unknown");
+    if [[ " ${answer_level1[@]} " =~  " ${answer1} " ]]; then
+        prediction_fname=$base_fname1 #candc, answer1
+    elif [ "$answer1" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer2"` && ! `echo ${answer_level1[@]} | grep -q "$answer3"`; then
+        prediction_fname=$base_fname1 #candc, answer1
     fi
-    #if [ "$answer1" == "1" ] && [ "$answer2" == "0" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "1" ] && [ "$answer2" == "coq_error" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "1" ] && [ "$answer2" == "" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "1" ] && [ "$answer2" == "unknown" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "0" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "coq_error" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "unknown" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0" ] && [ "$answer2" == "coq_error" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0" ] && [ "$answer2" == "" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0" ] && [ "$answer2" == "unknown" ]; then
-    #  prediction_fname=$base_fname1
-    #else
-    #  #use easyccg
-    #  prediction_fname=$base_fname2
-    #fi
+    if [[ " ${answer_level1[@]} " =~  " ${answer2} " ]]; then
+        prediction_fname=$base_fname2 #easyccg, answer2
+    elif [ "$answer2" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer1"` && ! `echo ${answer_level3[@]} | grep -q "$answer3"`; then
+        prediction_fname=$base_fname2 #easyccg, answer2
+    fi
+    if [[ " ${answer_level1[@]} " =~  " ${answer3} " ]]; then
+        prediction_fname=$base_fname3 #depccg, answer3
+    elif [ "$answer3" == "0" ] && `echo ${answer_level3[@]} | grep -q "$answer1"` && `echo ${answer_level3[@]} | grep -q "$answer2"`; then
+        prediction_fname=$base_fname3 #depccg
+    fi
+
     #if there is gold answer, check gold answer
     if [ -n "$gold_answer" ]; then
       if [ "$gold_answer" == "$answer1" ]; then
