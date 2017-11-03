@@ -41,12 +41,13 @@ fi
 
 
 # Copy a coq static library and compile it
-cp en/coqlib_fracas.v coqlib_fracas.v
-coqc coqlib_fracas.v
-cp en/tactics_coq_fracas.txt tactics_coq_fracas.txt
+cp en/coqlib_fracas.v coqlib.v
+coqc coqlib.v
+# tactics_coq_fracas is better?
+cp en/tactics_coq_sick.txt tactics_coq.txt
 
 for f in ./${plain_dir}/fracas_*.txt; do
-  ./en/similarity_en_mp_any_again.sh $f $templates $results_dir $word2vec;
+  ./en/similarity_en_mp_any_fracas.sh $f $templates $results_dir $word2vec;
 done &
 
 # Wait for the parallel processes to finish.
