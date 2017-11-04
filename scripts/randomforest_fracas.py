@@ -51,14 +51,14 @@ def regression(X_train=None, y_train=None, X_test=None, y_test=None, results="re
         'random_state'      : [0],
         'n_jobs'            : [200],
         'max_features'      : ['auto', 'log2', 'sqrt', None],
-        'criterion'         : ['mse'],
+        'criterion'         : ['gini'],
         'max_depth'         : [3, 5, 10, 20, 30, 40, 50, 100]
     }
 
     clf = make_pipeline(
         preprocessing.StandardScaler(),
         #preprocessing.MinMaxScaler(),
-        GridSearchCV(RandomForestRegressor(), parameters))
+        GridSearchCV(RandomForestClassifier(), parameters))
     clf.fit(X_train, y_train)
 
     #Serialize
@@ -361,8 +361,8 @@ def main():
     # Check errors
     output_errors(outputs, trial_targets, trial_id, args.results) #Outputs and sick_ids
 
-    #trial_targets = list(map(str, list(trial_targets)))
-    #outputs = list(map(str, list(outputs)))
+    trial_targets = list(map(str, list(trial_targets)))
+    outputs = list(map(str, list(outputs)))
     f = open("fracas_results/rte_report.txt", "w")
     f.write(classification_report(trial_targets, outputs, digits=5))
     f.write("\n"+str(accuracy_score(trial_targets, outputs)))
