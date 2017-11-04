@@ -41,7 +41,7 @@ fi
 
 
 # Copy a coq static library and compile it
-cp en/coqlib_fracas.v coqlib.v
+cp en/coqlib_sick.v coqlib.v
 coqc coqlib.v
 # tactics_coq_fracas is better?
 cp en/tactics_coq_sick.txt tactics_coq.txt
