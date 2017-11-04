@@ -45,7 +45,7 @@ def crossvalidation(clf, X_train, y_train):
     scores = cross_val_score(clf, X_train, y_train, cv=10)
     return scores.mean(), scores.std()
 
-def regression(X_train=None, y_train=None, X_test=None, y_test=None):
+def regression(X_train=None, y_train=None, X_test=None, y_test=None, results="results"):
     parameters = {
         'n_estimators'      : [10, 50, 100, 200, 300],
         'random_state'      : [0],
@@ -229,7 +229,7 @@ def retrieve_features(recalc=None, features=None, results=None):
         sources = np.array([get_features(line) for line in features])
         targets = np.array([float(rte2int(line[1])) for line in features])
         ids = np.array([line[0] for line in features])
-        size = len(ids)/2
+        size = int(len(ids)/2)
         train_sources = sources[0:size]
         train_targets = targets[0:size]
         trial_sources = sources[size:]
@@ -316,8 +316,14 @@ def load_sick_data(results):
     filelist = glob.glob('./'+results+'/fracas*.answer')
     for filename in filelist:
         filename = re.search("./"+results+"/(.*?).answer", filename).group(1)
-        if load_sick_data_from(filename) is not None:
-            sick_test.append(load_sick_data_from(filename))
+        if re.search("candc", filename):
+            continue
+        elif re.search("easyccg", filename):
+            continue
+        elif re.search("depccg", filename):
+            continue
+        if load_sick_data_from(filename, results) is not None:
+            sick_test.append(load_sick_data_from(filename, results))
     return sick_test
 
 ## spearman correlation
@@ -335,7 +341,7 @@ def main():
     parser.add_argument("--results", default="results")
     args = parser.parse_args()
     # Load sick data
-    features = load_sick_data()
+    features = load_sick_data(args.results)
     random.seed(23)
     random.shuffle(features)
     

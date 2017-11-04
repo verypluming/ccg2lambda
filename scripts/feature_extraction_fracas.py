@@ -26,10 +26,11 @@ from scipy.spatial.distance import jaccard
 from nltk.corpus import wordnet as wn
 from nltk.corpus.reader.wordnet import WordNetError
 from gensim import corpora, models, similarities, matutils
-import config
 import math
 from lxml import etree
 import re
+
+stop_list = set(['a', 'of', 'is', 'the']) 
 
 # Array containing the names of all features, for plotting purposes
 def get_overlap(sentence_a, sentence_b):
@@ -46,8 +47,8 @@ def word_overlap2(sentence_a, sentence_b):
     """
     Calculate the word overlap of two sentences.
     """
-    a_set = set(word for word in sentence_a) - config.stop_list
-    b_set = set(word for word in sentence_b) - config.stop_list
+    a_set = set(word for word in sentence_a) - stop_list
+    b_set = set(word for word in sentence_b) - stop_list
     score = len(a_set&b_set)/float(len(a_set|b_set))# len(s1&s2)/max(len(s1),len(s2))
     score = (len(a_set|b_set)-len(b_set))/len(a_set) #8337
 
@@ -59,39 +60,6 @@ def sentence_lengths_difference(sentence_a, sentence_b):
     """
     return abs(len(sentence_a)-len(sentence_b))/float(min(len(sentence_a),len(sentence_b)))
       
-def bigrams(sentence):
-    """
-    Since the skipgram model includes bigrams, look for them.
-    These are represented as word1_word2.
-    """
-    return [word+'_'+sentence[i+1] 
-            if word+'_'+sentence[i+1] in word_ids else None 
-                for i, word in enumerate(sentence[:-1])] if config.USE_BIGRAMS else []
-
-def trigrams(sentence):
-    """
-    Since the skipgram model includes trigrams, look for them.
-    These are represented as word1_word2_word3.
-    """
-    return [word+'_'+sentence[i+1]+'_'+sentence[i+2] 
-            if word+'_'+sentence[i+1]+'_'+sentence[i+2] in word_ids else None 
-                for i, word in enumerate(sentence[:-2])] if config.USE_TRIGRAMS else []
-
-def sentence_distance(sentence_a, sentence_b):
-    
-    """
-    Return the cosine distance between two sentences
-    """
-    
-    sent_a = np.sum([projections[word_ids.get(word, 0)] 
-        if word in word_ids else [0] 
-            for word in sentence_a+bigrams(sentence_a)+trigrams(sentence_a)], axis=0)
-    sent_b = np.sum([projections[word_ids.get(word, 0)] 
-        if word in word_ids else [0] 
-            for word in sentence_b+bigrams(sentence_b)+trigrams(sentence_b)], axis=0)
-        
-    return float(cosine(sent_a, sent_b))
-    
 def get_synset_overlap(sentence_a, sentence_b):
     """
     Calculate the synset overlap of two sentences.
@@ -257,25 +225,6 @@ def verb_overlap(sick_id):
         h_set = set(get_verbs(tree.xpath("//token[contains(@id, 't1')]")))
     if float(len(t_set | h_set)) > 0:
         score = len(t_set & h_set) / float(len(t_set | h_set))
-    return score
-
-def tfidf(sick_id):
-    corpus = config.bow_corpus
-    num = config.ids[sick_id]
-    score = matutils.cossim(config.tfidf_model[corpus[2*num-2]], config.tfidf_model[corpus[2*num-1]])
-    return score
-
-def lsi(sick_id):
-    corpus = config.bow_corpus
-    tfidf = config.tfidf_model[corpus]
-    num = config.ids[sick_id]
-    score = matutils.cossim(config.lsi_model[tfidf[2*num-2]], config.lsi_model[tfidf[2*num-1]])
-    return score
-
-def lda(sick_id):
-    corpus = config.bow_corpus
-    num = config.ids[sick_id]
-    score = matutils.cossim(config.lda_model[corpus[2*num-2]], config.lda_model[corpus[2*num-1]])
     return score
 
 def get_passive(root):
