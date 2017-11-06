@@ -37,7 +37,7 @@
 USAGE="Usage: ./similarity_en_mp_any.sh <sentences.txt> <semantic_templates.yaml>"
 
 # Check that the number of arguments is correct.
-#if [ "$#" -ne 3 ]; then
+#if [ "$#" -ne 4 ]; then
 #  echo "Error: Number of arguments invalid".
 #  echo $USAGE
 #  exit 1
@@ -68,8 +68,8 @@ function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
 
 # These variables contain the names of the directories where intermediate
 # results will be written.
-plain_dir="plain" # tokenized sentences.
-parsed_dir="parsed" # parsed sentences into XML or other formats.
+plain_dir="fracas_plain" # tokenized sentences.
+parsed_dir="fracas_parsed" # parsed sentences into XML or other formats.
 results_dir=$3 # HTML semantic outputs, proving results, etc.
 mkdir -p $plain_dir $parsed_dir $results_dir
 
@@ -234,7 +234,6 @@ function parse_depccg() {
     2> ${parsed_dir}/${base_fname}.log
 }
 
-
 function select_answer() {
   answer1_fname=$1
   answer2_fname=$2
@@ -253,15 +252,6 @@ function select_answer() {
   elif [ ! -e $answer1_fname ] && [ ! -e $answer2_fname ]; then
     prediction_fname=$base_fname3
   elif [ -e $answer1_fname ] && [ -e $answer2_fname ] && [ -e $answer3_fname ]; then
-    gold_file=${answer1_fname/results/plain}
-    gold_answer=`cat ${gold_file/.candc/}` #gold
-    if [ "$gold_answer" == "yes" ]; then
-      gold_answer="1"
-    elif [ "$gold_answer" == "no" ]; then
-      gold_answer="0.5"
-    elif [ "$gold_answer" == "unknown" ]; then
-      gold_answer="0"
-    fi
     answer1=`cat ${answer1_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #candc
     answer1=${answer1/\[}
     answer2=`cat ${answer2_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #easyccg
@@ -300,17 +290,6 @@ function select_answer() {
     fi
     if ! `echo ${answer_level2[@]} | grep -q "$answer1"` && ! `echo ${answer_level2[@]} | grep -q "$answer2"` && ! `echo ${answer_level2[@]} | grep -q "$answer3"`; then
         prediction_fname=$base_fname3 #if all answers can't be extracted, select depccg for error analysis
-    fi
-
-    #if there is gold answer, check gold answer
-    if [ -n "$gold_answer" ]; then
-      if [ "$gold_answer" == "$answer1" ]; then
-        prediction_fname=$base_fname1 #candc
-      elif [ "$gold_answer" == "$answer2" ]; then
-        prediction_fname=$base_fname2 #easyccg
-      elif [ "$gold_answer" == "$answer3" ]; then
-        prediction_fname=$base_fname3 #depccg
-      fi
     fi
   fi
 
@@ -354,7 +333,7 @@ if [ ! -e "${results_dir}/${sentences_basename/.tok/.answer}" ]; then
   for parser_name in {candc,easyccg,depccg}; do
     if [ ! -e "${results_dir}/${sentences_basename}.${parser_name}.answer" ]; then
       if [ "$word2vec" == "word2vec" ]; then
-        timeout 600 python scripts/prove.py \
+        timeout 600 python scripts/prove_w2v.py \
           $parsed_dir/${sentences_basename}.${parser_name}.sem.xml \
           --graph_out ${results_dir}/${sentences_basename}.${parser_name}.html \
           --abduction \

@@ -62,7 +62,7 @@ if [ ! -f $sentences_fname ]; then
 fi
 
 #word2vec flag
-word2vec=$4
+word2vec=${4:-none}
 
 function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
 
@@ -104,6 +104,13 @@ for parser in `cat en/parser_location.txt`; do
       exit 1
     fi
   fi
+  if [ "${parser_name}" == "depccg" ]; then
+    depccg_dir=${parser_dir}
+    if [ ! -d "${depccg_dir}" ] || [ ! -e "${depccg_dir}"/src/run.py ]; then
+      echo "depccg parser directory incorrect. Exit."
+      exit 1
+    fi
+  fi
 done
 
 
@@ -114,6 +121,20 @@ function parse_candc() {
       --models ${candc_dir}/models \
       --candc-printer xml \
       --input $parser_cmd ${plain_dir}/${base_fname}.tok \
+    2> ${parsed_dir}/${base_fname}.log \
+     > ${parsed_dir}/${base_fname}.candc.xml
+  python en/candc2transccg.py ${parsed_dir}/${base_fname}.candc.xml \
+    > ${parsed_dir}/${base_fname}.candc.jigg.xml \
+    2> ${parsed_dir}/${base_fname}.log
+}
+
+function parse_candc_question() {
+  # Parse using C&C.
+  base_fname=$1
+  ${candc_dir}/bin/candc \
+      --models ${candc_dir}/models/questions \
+      --candc-printer xml \
+      --input ${plain_dir}/${base_fname}.tok \
     2> ${parsed_dir}/${base_fname}.log \
      > ${parsed_dir}/${base_fname}.candc.xml
   python en/candc2transccg.py ${parsed_dir}/${base_fname}.candc.xml \
@@ -132,7 +153,7 @@ function parse_easyccg() {
     -model ${candc_dir}/models/ner \
     -ofmt "%w|%p|%n \n" \
     2>/dev/null | \
-  /usr/apps.sp3/nosupport/java/jre/bin/java -jar ${easyccg_dir}/easyccg.jar \
+  java -jar ${easyccg_dir}/easyccg.jar \
     --model ${easyccg_dir}/model \
     -i POSandNERtagged \
     -o extended \
@@ -145,6 +166,73 @@ function parse_easyccg() {
     2> ${parsed_dir}/${base_fname}.xml.log
 }
 
+function lemmatize() {
+    # apply easyccg's lemmatizer to input file
+    input_file=$1
+    lemmatized=`mktemp -t tmp`
+    cat $input_file | java -cp ${easyccg_dir}/easyccg.jar \
+        uk.ac.ed.easyccg.lemmatizer.MorphaStemmer \
+        > $lemmatized \
+        2>/dev/null
+    paste -d "|" $input_file $lemmatized | \
+        awk '{split($0, res, "|");
+             slen = split(res[1], sent1);split(res[2], sent2);
+             for (i=1; i <= slen; i++) {
+                printf sent1[i] "|" sent2[i]
+                if (i < slen) printf " "
+            }; print ""}'
+}
+
+function parse_easyccg_question() {
+  # Parse using EasyCCG.
+  base_fname=$1
+  cat ${plain_dir}/${base_fname}.tok | \
+  ${candc_dir}/bin/pos \
+    --model ${candc_dir}/models/pos \
+    2>/dev/null | \
+  ${candc_dir}/bin/ner \
+    -model ${candc_dir}/models/ner \
+    -ofmt "%w|%p|%n \n" \
+    2>/dev/null | \
+  java -jar ${easyccg_dir}/easyccg.jar \
+    --model ${easyccg_dir}/model_questions -s -r S[q] S[qem] S[wq] \
+    -i POSandNERtagged \
+    -o extended \
+    --maxLength 100 \
+    --nbest 1 \
+    > ${parsed_dir}/${base_fname}.easyccg \
+    2> ${parsed_dir}/${base_fname}.easyccg.log
+  python en/easyccg2jigg.py \
+    ${parsed_dir}/${base_fname}.easyccg \
+    ${parsed_dir}/${base_fname}.easyccg.jigg.xml \
+    2> ${parsed_dir}/${base_fname}.easyccg.xml.log
+}
+
+function parse_depccg() {
+    # Parse using depccg.
+    base_fname=$1
+    lemmatize ${plain_dir}/${base_fname}.tok | \
+    ${candc_dir}/bin/pos \
+        --model ${candc_dir}/models/pos \
+        --ifmt "%w|%l \n" \
+        --ofmt "%w|%l|%p \n" \
+        2> /dev/null | \
+    ${candc_dir}/bin/ner \
+        --model ${candc_dir}/models/ner \
+        --ifmt "%w|%l|%p \n" \
+        --ofmt "%w|%l|%p|%n \n" \
+        2> /dev/null | \
+    python ${depccg_dir}/src/run.py \
+        ${depccg_dir}/models/tri_headfirst \
+        en \
+        --input-format POSandNERtagged \
+        --format xml \
+    2> ${parsed_dir}/${base_fname}.depccg.xml.log \
+    > ${parsed_dir}/${base_fname}.depccg.xml
+  python en/candc2transccg.py ${parsed_dir}/${base_fname}.depccg.xml \
+    > ${parsed_dir}/${base_fname}.depccg.jigg.xml \
+    2> ${parsed_dir}/${base_fname}.log
+}
 
 function select_answer() {
   answer1_fname=$1
@@ -164,75 +252,45 @@ function select_answer() {
   elif [ ! -e $answer1_fname ] && [ ! -e $answer2_fname ]; then
     prediction_fname=$base_fname3
   elif [ -e $answer1_fname ] && [ -e $answer2_fname ] && [ -e $answer3_fname ]; then
-    #gold_file=${answer1_fname/${results_dir}/plain}
-    #gold_answer=`cat ${gold_file/.depccg/}` #gold
-    #if [ "$gold_answer" == "yes" ]; then
-    #  gold_answer="1"
-    #elif [ "$gold_answer" == "no" ]; then
-    #  gold_answer="0.5"
-    #elif [ "$gold_answer" == "unknown" ]; then
-    #  gold_answer="0"
-    #fi
-    answer1=`cat ${answer1_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #depccg
+    answer1=`cat ${answer1_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #candc
     answer1=${answer1/\[}
-    answer2=`cat ${answer2_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #candc
+    answer2=`cat ${answer2_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #easyccg
     answer2=${answer2/\[}
-    answer3=`cat ${answer3_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #easyccg
+    answer3=`cat ${answer3_fname}|tr -d '\r'|awk -F , 'NR == 1 {print $1}'` #depccg
     answer3=${answer3/\[}
+    if [ "${answer1}" == "" ]; then
+      answer1="unknown"
+    fi
+    if [ "${answer2}" == "" ]; then
+      answer2="unknown"
+    fi
+    if [ "${answer3}" == "" ]; then
+      answer3="unknown"
+    fi
 
     #select candc, easyccg or depccg
-    #accuracy: candc > depccg > easyccg
     #parser accuracy: depccg > easyccg > candc
-    answer_level1=("1" "0.5")
-    answer_level2=("0" "coq_error" "unknown" "")
-    answer_level3=("coq_error" "unknown" "")
-    if `echo ${answer_level1[@]} | grep -q "$answer2"` && `echo ${answer_level2[@]} | grep -q "$answer1"` && `echo ${answer_level2[@]} | grep -q "$answer3"`; then
-        prediction_fname=$base_fname2 #candc
-    elif [ "$answer2" == "0" ] && `echo ${answer_level3[@]} | grep -q "$answer1"` && `echo ${answer_level3[@]} | grep -q "$answer3"`; then
-        prediction_fname=$base_fname2 #candc
-    elif `echo ${answer_level1[@]} | grep -q "$answer3"` && `echo ${answer_level2[@]} | grep -q "$answer1"` && `echo ${answer_level2[@]} | grep -q "$answer2"`; then
-        prediction_fname=$base_fname3 #easyccg
-    elif [ "$answer3" == "0" ] && `echo ${answer_level3[@]} | grep -q "$answer1"` && `echo ${answer_level3[@]} | grep -q "$answer2"`; then
-        prediction_fname=$base_fname3 #easyccg
-    else
-        prediction_fname=$base_fname1 #depccg
+    answer_level1=("1" "0.5");
+    answer_level2=("1" "0.5" "0");
+
+    if [[ " ${answer_level1[@]} " =~  " ${answer1} " ]]; then
+        prediction_fname=$base_fname1 #candc, answer1
+    elif [ "$answer1" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer2"` && ! `echo ${answer_level1[@]} | grep -q "$answer3"`; then
+        prediction_fname=$base_fname1 #candc, answer1
     fi
-    #if [ "$answer1" == "1" ] && [ "$answer2" == "0" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "1" ] && [ "$answer2" == "coq_error" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "1" ] && [ "$answer2" == "" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "1" ] && [ "$answer2" == "unknown" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "0" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "coq_error" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0.5" ] && [ "$answer2" == "unknown" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0" ] && [ "$answer2" == "coq_error" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0" ] && [ "$answer2" == "" ]; then
-    #  prediction_fname=$base_fname1
-    #elif [ "$answer1" == "0" ] && [ "$answer2" == "unknown" ]; then
-    #  prediction_fname=$base_fname1
-    #else
-    #  #use easyccg
-    #  prediction_fname=$base_fname2
-    #fi
-    #if there is gold answer, check gold answer
-    #if [ -n "$gold_answer" ]; then
-    #  if [ "$gold_answer" == "$answer1" ]; then
-    #    prediction_fname=$base_fname1 #candc
-    #  elif [ "$gold_answer" == "$answer2" ]; then
-    #    prediction_fname=$base_fname2 #easyccg
-    #  elif [ "$gold_answer" == "$answer3" ]; then
-    #    prediction_fname=$base_fname3 #depccg
-    #  fi
-    #fi
+    if [[ " ${answer_level1[@]} " =~  " ${answer2} " ]]; then
+        prediction_fname=$base_fname2 #easyccg, answer2
+    elif [ "$answer2" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer1"` && ! `echo ${answer_level1[@]} | grep -q "$answer3"`; then
+        prediction_fname=$base_fname2 #easyccg, answer2
+    fi
+    if [[ " ${answer_level1[@]} " =~  " ${answer3} " ]]; then
+        prediction_fname=$base_fname3 #depccg, answer3
+    elif [ "$answer3" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer1"` && ! `echo ${answer_level1[@]} | grep -q "$answer2"`; then
+        prediction_fname=$base_fname3 #depccg
+    fi
+    if ! `echo ${answer_level2[@]} | grep -q "$answer1"` && ! `echo ${answer_level2[@]} | grep -q "$answer2"` && ! `echo ${answer_level2[@]} | grep -q "$answer3"`; then
+        prediction_fname=$base_fname3 #if all answers can't be extracted, select depccg for error analysis
+    fi
   fi
 
   if [ ! -z "${prediction_fname}" ]; then
@@ -248,6 +306,7 @@ if [ ! -e ${parsed_dir}/${sentences_basename}.xml ]; then
   echo "Syntactic parsing ${plain_dir}/${sentences_basename}.tok"
   parse_candc ${sentences_basename}
   parse_easyccg ${sentences_basename}
+  parse_depccg ${sentences_basename}
 fi
 
 # Semantic parsing the CCG trees in XML.
@@ -274,7 +333,7 @@ if [ ! -e "${results_dir}/${sentences_basename/.tok/.answer}" ]; then
   for parser_name in {candc,easyccg,depccg}; do
     if [ ! -e "${results_dir}/${sentences_basename}.${parser_name}.answer" ]; then
       if [ "$word2vec" == "word2vec" ]; then
-        timeout 600 python scripts/prove.py \
+        timeout 600 python scripts/prove_w2v.py \
           $parsed_dir/${sentences_basename}.${parser_name}.sem.xml \
           --graph_out ${results_dir}/${sentences_basename}.${parser_name}.html \
           --abduction \
