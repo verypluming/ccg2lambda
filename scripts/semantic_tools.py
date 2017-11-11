@@ -130,9 +130,9 @@ def prove_doc(doc, abduction=None, similarity=None):
                         axioms1, word_similarity1, subgoals_similarity1, origin_subgoals_similarity1, steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
                         subj_subgoals1, acc_subgoals1, dat_subgoals1, ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, relation_subgoals1, origin_relation_subgoals1,\
                         per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1 = calculate_similarity(coq_scripts, dynamic_library_str) 
-                        if subgoals_similarity1 == 0:
-                             #the case if only the conclusion contains negation
-                             inference_result_int1 = 0.5
+                       #if subgoals_similarity1 == 0:
+                       #      #the case if only the conclusion contains negation (A->B->False)
+                       #      inference_result_int1 = 0.5
                     else:
                         return inference_result_str, coq_scripts
         ## prove B->A
@@ -184,9 +184,9 @@ def prove_doc(doc, abduction=None, similarity=None):
                         axioms2, word_similarity2, subgoals_similarity2, origin_subgoals_similarity2, steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
                         subj_subgoals2, acc_subgoals2, dat_subgoals2, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2, relation_subgoals2, origin_relation_subgoals2,\
                         per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2 = calculate_similarity(coq_scripts2, dynamic_library_str)
-                        if subgoals_similarity2 == 0:
-                             # the case if only the conclusion contains negation
-                             inference_result_int2 = 0.5
+                        #if subgoals_similarity2 == 0:
+                        #     # the case if only the conclusion contains negation (B->A->False)
+                        #     inference_result_int2 = 0.5
                     else:
                         return inference_result_str, coq_scripts
         return [inference_result_int1, word_similarity1, axioms1, subgoals_similarity1,\
@@ -462,14 +462,14 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
             admit_command1+' repeat nltac_base.'+admit_command2+' Grab Existential Variables. admit. admit. Qed. Print t1.')
 
         delete_subgoals = len(subgoals)
-        if len(subgoals) == 1 and subgoals[0] == "False":
-            # the case if only the conclusion contains negation
-            delete_subgoals = 0
-        else:
-            delete_subgoals = len(subgoals)
-            subj_subgoals = subj_subgoals/delete_subgoals
-            acc_subgoals = acc_subgoals/delete_subgoals
-            dat_subgoals = dat_subgoals/delete_subgoals
+        #if len(subgoals) == 1 and subgoals[0] == "False":
+        #    # the case if only the conclusion contains negation(A->B->False)
+        #    delete_subgoals = 0
+        #else:
+        delete_subgoals = len(subgoals)
+        subj_subgoals = subj_subgoals/delete_subgoals
+        acc_subgoals = acc_subgoals/delete_subgoals
+        dat_subgoals = dat_subgoals/delete_subgoals
         #normal subgoals
         per_delete_subgoals= (delete_subgoals-relation_subgoals)
         per_relation_subgoals = relation_subgoals
@@ -557,14 +557,14 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 origin_acc_subgoals += 1
             elif "(Dat" in s:
                 origin_dat_subgoals += 1
-        if len(origin_subgoals) == 1 and origin_subgoals[0] == "False":
-            # the case if only the conclusion contains negation
-            origin_delete_subgoals = 0
-        else:
-            origin_delete_subgoals = len(origin_subgoals)
-            origin_subj_subgoals = origin_subj_subgoals/origin_delete_subgoals
-            origin_acc_subgoals = origin_acc_subgoals/origin_delete_subgoals
-            origin_dat_subgoals = origin_dat_subgoals/origin_delete_subgoals
+        #if len(origin_subgoals) == 1 and origin_subgoals[0] == "False":
+        #    # the case if only the conclusion contains negation(A->B->False)
+        #    origin_delete_subgoals = 0
+        #else:
+        origin_delete_subgoals = len(origin_subgoals)
+        origin_subj_subgoals = origin_subj_subgoals/origin_delete_subgoals
+        origin_acc_subgoals = origin_acc_subgoals/origin_delete_subgoals
+        origin_dat_subgoals = origin_dat_subgoals/origin_delete_subgoals
         #normal subgoals
         per_origin_delete_subgoals = (origin_delete_subgoals-origin_relation_subgoals)
         per_origin_relation_subgoals = origin_relation_subgoals
