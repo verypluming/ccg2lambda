@@ -371,7 +371,7 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 pre_similarities.append(float(pre_similarity.decode()))
             elif dic == "wn":
                 pre_similarity = wordnet_similarity(pr, word)
-                pre_similarities.append(pre_similarity
+                pre_similarities.append(pre_similarity)
             elif dic == "copy":
                 # copy or phrase: calculate similarity as 1
                 pre_similarity = 1
