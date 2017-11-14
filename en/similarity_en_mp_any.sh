@@ -285,20 +285,20 @@ function select_answer() {
 
     if [[ " ${answer_level1[@]} " =~  " ${answer1} " ]]; then
         prediction_fname=$base_fname1 #candc, answer1
-    elif [ "$answer1" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer2"` && ! `echo ${answer_level1[@]} | grep -q "$answer3"`; then
+    elif [ "$answer1" == "0" ] && [[ ! " ${answer_level1[@]} " =~  " ${answer2} " ]] && [[ ! " ${answer_level1[@]} " =~  " ${answer3} " ]]; then
         prediction_fname=$base_fname1 #candc, answer1
     fi
     if [[ " ${answer_level1[@]} " =~  " ${answer2} " ]]; then
         prediction_fname=$base_fname2 #easyccg, answer2
-    elif [ "$answer2" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer1"` && ! `echo ${answer_level1[@]} | grep -q "$answer3"`; then
+    elif [ "$answer2" == "0" ] && [[ ! " ${answer_level1[@]} " =~  " ${answer1} " ]] && [[ ! " ${answer_level1[@]} " =~  " ${answer3} " ]]; then
         prediction_fname=$base_fname2 #easyccg, answer2
     fi
     if [[ " ${answer_level1[@]} " =~  " ${answer3} " ]]; then
         prediction_fname=$base_fname3 #depccg, answer3
-    elif [ "$answer3" == "0" ] && ! `echo ${answer_level1[@]} | grep -q "$answer1"` && ! `echo ${answer_level1[@]} | grep -q "$answer2"`; then
+    elif [ "$answer3" == "0" ] && [[ ! " ${answer_level1[@]} " =~  " ${answer1} " ]] && [[ ! " ${answer_level1[@]} " =~  " ${answer2} " ]]; then
         prediction_fname=$base_fname3 #depccg
     fi
-    if ! `echo ${answer_level2[@]} | grep -q "$answer1"` && ! `echo ${answer_level2[@]} | grep -q "$answer2"` && ! `echo ${answer_level2[@]} | grep -q "$answer3"`; then
+    if [[ ! " ${answer_level2[@]} " =~  " ${answer1} " ]] && [[ ! " ${answer_level2[@]} " =~  " ${answer2} " ]] && [[ ! " ${answer_level2[@]} " =~  " ${answer3} " ]]; then
         prediction_fname=$base_fname3 #if all answers can't be extracted, select depccg for error analysis
     fi
 
