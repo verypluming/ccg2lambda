@@ -36,6 +36,7 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
 import re
 import argparse
+import glob
 
 from sklearn.cross_validation import cross_val_score
 
@@ -75,17 +76,17 @@ def regression_rte(X_train=None, y_train=None, X_test=None, y_test=None, results
         'max_depth'         : [3, 5, 10, 20, 30, 40, 50, 100]
     }
 
-    clf = make_pipeline(
+    clf2 = make_pipeline(
         preprocessing.StandardScaler(),
         #preprocessing.MinMaxScaler(),
         GridSearchCV(RandomForestClassifier(), parameters))
-    clf.fit(X_train, y_train)
+    clf2.fit(X_train, y_train)
 
     #Serialize
-    joblib.dump(clf, './'+results+'/rte.pkl')
+    joblib.dump(clf2, './'+results+'/rte.pkl')
     #clf = joblib.load('results_20170614/randomforestclassifier_rte_wnw2v_sick.pkl')
 
-    return clf
+    return clf2
 
 def deep_forest(X_train, y_train, X_test, y_test):
     mgc_forest = MGCForest(
@@ -288,18 +289,6 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
             trial_targets = np.load(in_f)
             train_id = np.load(in_f)
             trial_id = np.load(in_f)
-        # Extract trial features and targets
-        print ('Feature extraction (trial)...')
-        trial_sources = np.array([get_features(line) for line in sick_test])
-        trial_targets = np.array([float(line[1]) for line in sick_test])
-        trial_id = np.array([line[0] for line in sick_test])
-        with open('./'+results+'/all/features_np_again.pickle', 'wb') as out_f:
-            np.save(out_f, train_sources)
-            np.save(out_f, train_targets)
-            np.save(out_f, trial_sources)
-            np.save(out_f, trial_targets)
-            np.save(out_f, train_id)
-            np.save(out_f, trial_id)
     return train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id
 
 
@@ -358,7 +347,6 @@ def output_errors_rte(outputs, trial_targets, ids, results):
 
 def load_sick_data_from(sick_id, results):
     line = []
-    print(kind, sick_id)
     line.append(sick_id)
     f = open('./plain2/sick_trial_'+sick_id+'.answer', 'r')
     line.append(f.readlines()[0].strip())
@@ -426,13 +414,29 @@ def rmse(x, y):
     ## x:targets y:predictions
     return np.sqrt(((y - x) ** 2).mean())
 
+def load_rte(sick_ids):
+    rte = []
+    entailment = ""
+    for sick_id in sick_ids:
+        if os.path.isfile('./plain/sick_trial_'+sick_id+'.answer'):
+            g = open('./plain/sick_trial_'+sick_id+'.answer', 'r')
+            entailment = g.readlines()[0].strip()
+            g.close()
+        if entailment == "yes":
+            rte.append(2)
+        elif entailment == "no":
+            rte.append(1)
+        else:
+            rte.append(0)
+    return rte
+ 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--results", default="results")
     args = parser.parse_args()
     # Load sick data
     sick_data = load_sick_data(args.results)
-    split _ int(len(sick_data)/2)
+    split = int(len(sick_data)/2)
     sick_train = sick_data[:split]
     sick_test = sick_data[split:]
     random.seed(23)
@@ -441,16 +445,14 @@ def main():
     print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
 
     # Get training and trial features
-    train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(1, sick_train, sick_test, args.results)
-    #train_sources, train_targets, trial_sources, trial_targets = retrieve_features()
-    #train_sources, train_targets, trial_sources, trial_targets = retrieve_features(0, sick_train, sick_test, args.results)
+    #train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(1, sick_train, sick_test, args.results)
+    train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(0, sick_train, sick_test, args.results)
     
     # Train the regressor
     clf = regression(train_sources, train_targets, trial_sources, trial_targets, args.results)
 
     # Apply regressor to trial data
     outputs = clf.predict(trial_sources)
-    trial_targets = np.array([float(line[1]) for line in sick_test])
 
     # Evaluate regressor
     write_for_evaluation(outputs, [line[0] for line in sick_test], trial_targets, args.results) #Outputs and sick_ids
@@ -473,6 +475,9 @@ def main():
         score = rmse(x, y)
         eval_f.write('mean squared error:{0}\n'.format(score))    
 
+    #extract RTE labels
+    train_targets = load_rte(train_id)
+    trial_targets = load_rte(trial_id)
     clf2 = regression_rte(train_sources, train_targets, trial_sources, trial_targets, args.results)
 
     # Apply regressor to trial data
