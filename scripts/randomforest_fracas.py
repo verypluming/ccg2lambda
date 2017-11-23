@@ -26,7 +26,7 @@ from sklearn.metrics import mean_squared_error, classification_report, accuracy_
 from deep_forest import MGCForest
 import uuid
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import random
 import difflib
 from feature_extraction_fracas import *

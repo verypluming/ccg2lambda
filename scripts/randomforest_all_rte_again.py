@@ -11,7 +11,7 @@ from sklearn.metrics import mean_squared_error, classification_report, accuracy_
 from deep_forest import MGCForest
 import uuid
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import random
 import difflib
 import feature_extraction
@@ -383,7 +383,7 @@ def main():
     parser.add_argument("--results", default="results")
     args = parser.parse_args()
     # Load sick data
-    #train_sources, train_targets, trial_sources, trial_targets = retrieve_features(1, sick_train, sick_test)
+    #train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id  = retrieve_features(1, sick_train, sick_test, args.results)
     train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(None, None, None, args.results)
     #print('train_sources:{0}, train_targets:{1}, trial_sources:{2}, trial_targets:{3}'.format(train_sources, train_targets, trial_sources, trial_targets))
 
