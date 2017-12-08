@@ -31,6 +31,7 @@ from normalization import denormalize_token, normalize_token
 from tactics import get_tactics
 from tree_tools import tree_or_string, tree_contains
 import unicodedata
+from abduction_phrase_eval import *
 
 def is_theorem_defined(output_lines):
     """
@@ -426,15 +427,30 @@ def try_sim_abductions(coq_scripts):
     axioms = set()
 
     while True:
+        #phrasal abduction
+        #entailment proof
         inference_result_str, direct_proof_scripts, new_direct_axioms = \
-        try_abduction(direct_proof_script, previous_axioms=axioms, expected='yes')
+            try_phrase_abduction(direct_proof_script,
+                        previous_axioms=axioms, expected='yes')
         current_axioms = axioms.union(new_direct_axioms)
-        reverse_proof_scripts = []
-        if not inference_result_str == 'yes':
+        if inference_result_str == 'unknown':
+            #contradiction proof
             inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-            try_abduction(reverse_proof_script, previous_axioms=current_axioms, expected='no')
-            current_axioms.update(new_reverse_axioms)
+                try_phrase_abduction(reverse_proof_script,
+                              previous_axioms=axioms, expected='no')
+            current_axioms = axioms.union(new_reverse_axioms)
         all_scripts = direct_proof_scripts + reverse_proof_scripts
+
+        if inference_result_str == "unknown":
+            #previous abduction
+            inference_result_str, direct_proof_scripts, new_direct_axioms = \
+            try_abduction(direct_proof_script, previous_axioms=axioms, expected='yes')
+            current_axioms = axioms.union(new_direct_axioms)
+            if not inference_result_str == 'yes':
+                inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
+                try_abduction(reverse_proof_script, previous_axioms=current_axioms, expected='no')
+                current_axioms.update(new_reverse_axioms)
+            all_scripts = direct_proof_scripts + reverse_proof_scripts
         if len(axioms) == len(current_axioms) or inference_result_str != 'unknown':
             break
         axioms = current_axioms
