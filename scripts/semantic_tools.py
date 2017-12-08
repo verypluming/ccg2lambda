@@ -320,7 +320,7 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     coq_lines = coq_scripts[-1].split("\n")
     for coq_line in coq_lines:
         if re.search("Hint", coq_line):
-            if re.search("approx", coq_line):
+            if re.search("approx", coq_line) or re.search("ax_phrase", coq_line):
                 #word2vec
                 word_lines = coq_line.split("_")
                 word1 = word_lines[2]
@@ -329,7 +329,7 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 else:
                     word2 = word_lines[3]
                 merge_axioms[word1].append("w2v "+word2)
-            elif re.search("ax_copy", coq_line) or re.search("ax_remove", coq_line) or re.search("ax_phrase", coq_line):
+            elif re.search("ax_copy", coq_line) or re.search("ax_remove", coq_line):
                 #copy, phrase level = calculate similarity as 1
                 continue
             else:
