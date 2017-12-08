@@ -370,9 +370,9 @@ def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script
         get_lexical_relations_from_preds(
             premise_preds, conclusion_pred, coq_script, pred_args)
     axioms.update(set(linguistic_axioms))
-    if not axioms:
-        approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
-        axioms.update(approx_axioms)
+    #if not axioms:
+    #    approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
+    #    axioms.update(approx_axioms)
     axioms = filter_wrong_axioms(axioms, coq_script)
     return axioms
 
