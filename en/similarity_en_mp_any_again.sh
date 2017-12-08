@@ -333,7 +333,7 @@ if [ ! -e "${results_dir}/${sentences_basename/.tok/.answer}" ]; then
   for parser_name in {candc,easyccg,depccg}; do
     if [ ! -e "${results_dir}/${sentences_basename}.${parser_name}.answer" ]; then
       if [ "$word2vec" == "word2vec" ]; then
-        timeout 600 python scripts/prove_w2v.py \
+        timeout 600 python scripts/prove.py \
           $parsed_dir/${sentences_basename}.${parser_name}.sem.xml \
           --graph_out ${results_dir}/${sentences_basename}.${parser_name}.html \
           --abduction \
