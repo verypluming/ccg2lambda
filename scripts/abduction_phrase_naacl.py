@@ -52,28 +52,18 @@ def TryPhraseAbduction(coq_scripts, target):
     inference_result_str, all_scripts = "unknown", []
     while inference_result_str == "unknown":
         #continue abduction for phrase acquisition until inference_result_str matches target
-        #if target == 'yes':
-        #    #entailment proof
-        #    inference_result_str, direct_proof_scripts, new_direct_axioms = \
-        #        try_phrase_abduction(direct_proof_script,
-        #                      previous_axioms=axioms, expected='yes')
-        #    current_axioms = axioms.union(new_direct_axioms)
-        #elif target == 'no':
-        #    #contradiction proof
-        #    inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-        #        try_phrase_abduction(reverse_proof_script,
-        #                      previous_axioms=axioms, expected='no')
-        #    entailment proof
-        inference_result_str, direct_proof_scripts, new_direct_axioms = \
-            try_phrase_abduction(direct_proof_script,
+        if target == 'yes':
+            #entailment proof
+            inference_result_str, direct_proof_scripts, new_direct_axioms = \
+                try_phrase_abduction(direct_proof_script,
                               previous_axioms=axioms, expected='yes')
-        current_axioms = axioms.union(new_direct_axioms)
-        if not inference_result_str == 'yes':
+            current_axioms = axioms.union(new_direct_axioms)
+        elif target == 'no':
             #contradiction proof
             inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
                 try_phrase_abduction(reverse_proof_script,
                               previous_axioms=axioms, expected='no')
-            current_axioms = axioms.update(new_reverse_axioms)
+            current_axioms = axioms.union(new_reverse_axioms)
         all_scripts = direct_proof_scripts + reverse_proof_scripts
         if len(axioms) == len(current_axioms):
             break
@@ -117,21 +107,21 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
 def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes'):
     axioms = set()
     #check sub-goals with normal variables
-    #conclusions_normal = distinguish_normal_conclusions(conclusions)
+    conclusions_normal = distinguish_normal_conclusions(conclusions)
 
     #if existential variables contain in sub-goals, create axioms for sub-goals with existential variables at first
     axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
 
     #create axioms for sub-goals with normal variables
-    #for conclusion in conclusions_normal:
-    #    matching_premises = get_premises_that_partially_match_conclusion_args(premises, conclusion)
-    #    premise_preds = [premise.split()[2] for premise in matching_premises]
-    #    pred_args = get_predicate_case_arguments(matching_premises, conclusion)
-    #    axioms.update(make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion, pred_args, expected))
-    #    if not axioms:
-    #        failure_log = make_failure_log(
-    #            conclusion, premise_preds, conclusion, premises, coq_output_lines)
-    #        print(json.dumps(failure_log), file=sys.stderr)
+    for conclusion in conclusions_normal:
+        matching_premises = get_premises_that_partially_match_conclusion_args(premises, conclusion)
+        premise_preds = [premise.split()[2] for premise in matching_premises]
+        pred_args = get_predicate_case_arguments(matching_premises, conclusion)
+        axioms.update(make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion, pred_args, expected))
+        if not axioms:
+            failure_log = make_failure_log(
+                conclusion, premise_preds, conclusion, premises, coq_output_lines)
+            print(json.dumps(failure_log), file=sys.stderr)
     return axioms
 
 def make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion_pred, pred_args, expected):
@@ -263,9 +253,9 @@ def is_theorem_almost_defined(output_lines):
     subgoalflg = 0
     if len(conclusions) > 0:
         for conclusion in conclusions:
-            #if not "False" in conclusion:
-            if not "=" in conclusion:
-                subgoalflg = 1
+            if not "False" in conclusion:
+                if not "=" in conclusion:
+                    subgoalflg = 1
             if "No more subgoals" in conclusion:
                 return True
     if subgoalflg == 1:
@@ -429,11 +419,10 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions):
     for args, c_preds in sorted(c_args_preds.items(), key=lambda x: len(x[0]), reverse=True):
         c_preds = sorted([
             p for p in c_preds if p.startswith('_') and p not in exclude_preds_in_conclusion])
-        if len(args) > 0:
+        if len(args) > 1:
             premise_preds = [
                 p for p, p_args in p_pred_args.items() if set(p_args).issubset(args)]
             premise_preds = sorted([p for p in premise_preds if not contains_case(p)])
-            #print(args, c_preds, premise_preds)
             if premise_preds:
                 phrase_pairs.append((premise_preds, c_preds)) # Saved phrase pairs for Yanaka-san.
                 for premise_pred in premise_preds:
@@ -450,13 +439,6 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions):
                         axioms.add(axiom)
                         covered_conclusions.add(p)
     print(axioms) # this is a list of tuples of lists.
-
-    #to do: after making phrasal axiom candidates, check the validity of these candidates by:
-    #- predicate type
-    #- sequence match
-    #- external knowledge match(WordNet)
-    #- distributional model(Tian-san or this: https://github.com/mchen24/iclr2017)
-    # consider how to decide the validity(maybe setting threshold is not enough)
     return axioms
 
 def make_phrases_from_premises_and_conclusions_ex_(premises, conclusions):
