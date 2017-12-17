@@ -102,7 +102,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
                        "open formula": has_open_formula(output_lines)}
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms
-    axioms = make_phrase_axioms(premise_lines, conclusion, output_lines, expected)
+    axioms = make_phrase_axioms(premise_lines, conclusion, output_lines, expected, coq_script_debug)
     #axioms = filter_wrong_axioms(axioms, coq_script) temporarily
     axioms = axioms.union(previous_axioms)
     new_coq_script = insert_axioms_in_coq_script(axioms, coq_script_debug)
@@ -114,13 +114,13 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
     inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
     return inference_result_str, [new_coq_script], axioms
 
-def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes'):
+def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None):
     axioms = set()
     #check sub-goals with normal variables
     #conclusions_normal = distinguish_normal_conclusions(conclusions)
 
     #if existential variables contain in sub-goals, create axioms for sub-goals with existential variables at first
-    axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+    axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug)
 
     #create axioms for sub-goals with normal variables
     #for conclusion in conclusions_normal:
@@ -366,7 +366,7 @@ def check_decomposed(line):
         return False
     return True
 
-def make_phrases_from_premises_and_conclusions_ex(premises, conclusions):
+def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug):
     covered_conclusions = set()
     axioms = set()
     phrase_pairs = []
@@ -433,7 +433,6 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions):
             premise_preds = [
                 p for p, p_args in p_pred_args.items() if set(p_args).issubset(args)]
             premise_preds = sorted([p for p in premise_preds if not contains_case(p)])
-            #print(args, c_preds, premise_preds)
             if premise_preds:
                 phrase_pairs.append((premise_preds, c_preds)) # Saved phrase pairs for Yanaka-san.
                 for premise_pred in premise_preds:
@@ -450,14 +449,34 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions):
                         axioms.add(axiom)
                         covered_conclusions.add(p)
     print(axioms) # this is a list of tuples of lists.
+    coq_lists = coq_script_debug.split("\n")
+    param_lists = [re.sub("Parameter ", "", coq_list) for coq_list in coq_lists if re.search("Parameter", coq_list)]
+    type_lists = [param_list.split(":") for param_list in param_lists]
+    print(type_lists)
+    for phrase_pair in phrase_pairs:
+        p_ph_preds = phrase_pair[0]
+        p_ph_types = [check_types(p_ph_pred, type_lists) for p_ph_pred in p_ph_preds]
+        c_ph_preds = phrase_pair[1]
+        c_ph_types = [check_types(c_ph_pred, type_lists) for c_ph_pred in c_ph_preds]
+        print(p_ph_preds, p_ph_types, c_ph_preds, c_ph_types)
 
     #to do: after making phrasal axiom candidates, check the validity of these candidates by:
-    #- predicate type
+    #- predicate type (extract from coq_script_debug)
     #- sequence match
     #- external knowledge match(WordNet)
     #- distributional model(Tian-san or this: https://github.com/mchen24/iclr2017)
     # consider how to decide the validity(maybe setting threshold is not enough)
+
+    #to do2: create different antonym axioms based on types
+    # if type is Entity -> Prop, then create axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
+    # if tyoe is Event -> Prop, axiom = 'Axiom ax_{0}_{1}_{2} : forall F x y, _{1} x -> _{2} y -> F (Subj x) -> F (Subj y)  -> False.'\
+
     return axioms
+
+def check_types(pred, type_lists):
+    for type_list in type_lists:
+        if pred in type_list[0]:
+            return type_list[1]
 
 def make_phrases_from_premises_and_conclusions_ex_(premises, conclusions):
     premises = [p for p in premises if get_pred_from_coq_line(p).startswith('_')]
