@@ -32,6 +32,7 @@ from scipy.spatial import distance
 from semantic_tools import is_theorem_defined
 from tactics import get_tactics
 from tree_tools import is_string
+from linguistic_tools import linguistic_relationship, get_wordnet_cascade
 
 class AxiomsPhrase(object):
     """
@@ -120,7 +121,7 @@ def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='y
     #conclusions_normal = distinguish_normal_conclusions(conclusions)
 
     #if existential variables contain in sub-goals, create axioms for sub-goals with existential variables at first
-    axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug)
+    axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected)
 
     #create axioms for sub-goals with normal variables
     #for conclusion in conclusions_normal:
@@ -225,35 +226,6 @@ def check_case_from_list(total_arg_list):
             new_total_arg_list.append(t)
     sorted_new_total_arg_list = list(set(new_total_arg_list))
     return sorted_new_total_arg_list
-
-def calc_wordnetsim(sub_pred, prem_pred):
-    wordnetsim = 0.0
-    word_similarity_list = []
-    wordFromList1 = wn.synsets(sub_pred)
-    wordFromList2 = wn.synsets(prem_pred)
-    for w1 in wordFromList1:
-        for w2 in wordFromList2:
-            if w1.path_similarity(w2) is not None: 
-                word_similarity_list.append(w1.path_similarity(w2))
-    if(word_similarity_list):
-        wordnetsim = max(word_similarity_list)
-    return wordnetsim
-
-def calc_ngramsim(sub_pred, prem_pred):
-    ngramsim = difflib.SequenceMatcher(None, sub_pred, prem_pred).ratio()
-    return ngramsim
-
-def calc_argumentsim(sub_pred, prem_pred, pred_args):
-    sub_pred = normalize_token(sub_pred)
-    prem_pred = normalize_token(prem_pred)
-    if pred_args[sub_pred] == pred_args[prem_pred]:
-        return 1.0
-    elif pred_args[sub_pred] in pred_args[prem_pred]:
-        #ex. sub_goal: play x0, premise: with x0 x1
-        return 0.5
-    else:
-        return 0.0
-
 
 def is_theorem_almost_defined(output_lines):
     #check if all content subgoals are deleted(remaining relation subgoals can be permitted)
@@ -366,7 +338,7 @@ def check_decomposed(line):
         return False
     return True
 
-def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug):
+def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected):
     covered_conclusions = set()
     axioms = set()
     phrase_pairs = []
@@ -452,20 +424,23 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
     coq_lists = coq_script_debug.split("\n")
     param_lists = [re.sub("Parameter ", "", coq_list) for coq_list in coq_lists if re.search("Parameter", coq_list)]
     type_lists = [param_list.split(":") for param_list in param_lists]
-    print(type_lists)
-    for phrase_pair in phrase_pairs:
-        p_ph_preds = phrase_pair[0]
-        p_ph_types = [check_types(p_ph_pred, type_lists) for p_ph_pred in p_ph_preds]
-        c_ph_preds = phrase_pair[1]
-        c_ph_types = [check_types(c_ph_pred, type_lists) for c_ph_pred in c_ph_preds]
-        print(p_ph_preds, p_ph_types, c_ph_preds, c_ph_types)
 
-    #to do: after making phrasal axiom candidates, check the validity of these candidates by:
-    #- predicate type (extract from coq_script_debug)
-    #- sequence match
-    #- external knowledge match(WordNet)
-    #- distributional model(Tian-san or this: https://github.com/mchen24/iclr2017)
-    # consider how to decide the validity(maybe setting threshold is not enough)
+    #extract features of these candidates by type, ngram, WN(sim, relation), W2V, RTE_gold
+    for phrase_pair in phrase_pairs:
+        p_ph_preds, c_ph_preds = phrase_pair[0], phrase_pair[1]
+        for c_ph_pred in c_ph_preds:
+            for p_ph_pred in p_ph_preds:
+                c_ph_word = re.sub("_", "", c_ph_pred)
+                p_ph_word = re.sub("_", "", p_ph_pred)
+                typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
+                ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
+                wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
+                word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
+                simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
+                wordnetrel = check_wordnetrel(c_ph_word, p_ph_word)
+                rte = check_rte(expected)
+                features = simlist + wordnetrel + rte
+                print(c_ph_pred, p_ph_pred, features)
 
     #to do2: create different antonym axioms based on types
     # if type is Entity -> Prop, then create axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
@@ -477,6 +452,62 @@ def check_types(pred, type_lists):
     for type_list in type_lists:
         if pred in type_list[0]:
             return type_list[1]
+
+def calc_typesim(c_type, p_type):
+    if c_type == p_type:
+        return 1.0
+    else:
+        return 0.0
+
+def calc_word2vecsim(sub_pred, prem_pred):
+    process = Popen(\
+    'curl http://localhost:5000/word2vec/similarity?w1='+ sub_pred +'\&w2='+ prem_pred, \
+    shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    similarity, err = process.communicate()
+    try:
+        return float(similarity.decode())
+    except ValueError:
+        return 0.0
+
+def check_wordnetrel(sub_pred, prem_pred):
+    rel_list = ['copy', 'inflection', 'derivation', 'synonym', 'antonym', 'hypernym', 'hyponym', 'sister', 'cousin', 'similar']
+    relations = linguistic_relationship(prem_pred, sub_pred)
+    relation = get_wordnet_cascade(relations)
+    rel_vec = [1.0 if rel == relation else 0.0 for rel in rel_list]
+    return rel_vec
+
+def check_rte(expected):
+    rte_list = ['yes', 'no', 'unknown']
+    rte_vec = [1.0 if rte == expected else 0.0 for rte in rte_list]
+    return rte_vec
+
+def calc_wordnetsim(sub_pred, prem_pred):
+    wordnetsim = 0.0
+    word_similarity_list = []
+    wordFromList1 = wn.synsets(sub_pred)
+    wordFromList2 = wn.synsets(prem_pred)
+    for w1 in wordFromList1:
+        for w2 in wordFromList2:
+            if w1.path_similarity(w2) is not None: 
+                word_similarity_list.append(w1.path_similarity(w2))
+    if(word_similarity_list):
+        wordnetsim = max(word_similarity_list)
+    return wordnetsim
+
+def calc_ngramsim(sub_pred, prem_pred):
+    ngramsim = difflib.SequenceMatcher(None, sub_pred, prem_pred).ratio()
+    return ngramsim
+
+def calc_argumentsim(sub_pred, prem_pred, pred_args):
+    sub_pred = normalize_token(sub_pred)
+    prem_pred = normalize_token(prem_pred)
+    if pred_args[sub_pred] == pred_args[prem_pred]:
+        return 1.0
+    elif pred_args[sub_pred] in pred_args[prem_pred]:
+        #ex. sub_goal: play x0, premise: with x0 x1
+        return 0.5
+    else:
+        return 0.0
 
 def make_phrases_from_premises_and_conclusions_ex_(premises, conclusions):
     premises = [p for p in premises if get_pred_from_coq_line(p).startswith('_')]

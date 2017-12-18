@@ -315,8 +315,6 @@ def get_wordnet_cascade(ling_relations):
     relation = 'antonym'
   elif 'hypernym' in ling_relations:
     relation = 'hypernym'
-  elif 'similar' in ling_relations:
-    relation = 'similar'
   elif 'hyponym' in ling_relations:
     relation = 'hyponym'
   elif any(lr.startswith('sister') for lr in ling_relations):
@@ -327,4 +325,6 @@ def get_wordnet_cascade(ling_relations):
     cousin_rels = [lr for lr in ling_relations if lr.startswith('cousin')]
     assert cousin_rels
     relation = cousin_rels[0]
+  elif 'similar' in ling_relations:
+    relation = 'similar'
   return relation
