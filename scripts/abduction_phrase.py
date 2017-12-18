@@ -103,7 +103,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
                        "open formula": has_open_formula(output_lines)}
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms
-    axioms = make_phrase_axioms(premise_lines, conclusion, output_lines, expected, coq_script_debug)
+    axioms, features = make_phrase_axioms(premise_lines, conclusion, output_lines, expected, coq_script_debug)
     #axioms = filter_wrong_axioms(axioms, coq_script) temporarily
     axioms = axioms.union(previous_axioms)
     new_coq_script = insert_axioms_in_coq_script(axioms, coq_script_debug)
@@ -112,16 +112,24 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output_lines = [line.decode('utf-8').strip()
                     for line in process.stdout.readlines()]
-    inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
+    if is_theorem_almost_defined(output_lines):
+        inference_result_str = expected
+        features_log = {"features": features, "validity": 1.0}
+        print(json.dumps(features_log), file=sys.stderr)
+    else:
+        inference_result_str = 'unknown'
+        features_log = {"features": features, "validity": 0.0}
+        print(json.dumps(features_log), file=sys.stderr)
     return inference_result_str, [new_coq_script], axioms
 
 def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None):
     axioms = set()
+    features = []
     #check sub-goals with normal variables
     #conclusions_normal = distinguish_normal_conclusions(conclusions)
 
     #if existential variables contain in sub-goals, create axioms for sub-goals with existential variables at first
-    axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected)
+    axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected)
 
     #create axioms for sub-goals with normal variables
     #for conclusion in conclusions_normal:
@@ -133,7 +141,7 @@ def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='y
     #        failure_log = make_failure_log(
     #            conclusion, premise_preds, conclusion, premises, coq_output_lines)
     #        print(json.dumps(failure_log), file=sys.stderr)
-    return axioms
+    return axioms, features
 
 def make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion_pred, pred_args, expected):
     axioms = set()
@@ -339,6 +347,10 @@ def check_decomposed(line):
     return True
 
 def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected):
+    coq_lists = coq_script_debug.split("\n")
+    param_lists = [re.sub("Parameter ", "", coq_list) for coq_list in coq_lists if re.search("Parameter", coq_list)]
+    type_lists = [param_list.split(":") for param_list in param_lists]
+    features = []
     covered_conclusions = set()
     axioms = set()
     phrase_pairs = []
@@ -390,6 +402,19 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         "x0",
                         "y0")
                 axioms.add(axiom)
+                #extract features of these candidates by type, ngram, WN(sim, relation), W2V, RTE_gold
+                c_ph_word = re.sub("_", "", case_c_pred)
+                p_ph_word = re.sub("_", "", p_pred)
+                typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
+                ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
+                wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
+                word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
+                simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
+                wordnetrel = check_wordnetrel(c_ph_word, p_ph_word)
+                rte = check_rte(expected)
+                feature = simlist + wordnetrel + rte
+                #print(axiom, feature)
+                features.append(feature)
                 #covered_conclusions.add(p)
 
 
@@ -419,34 +444,28 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             ' '.join('x' + str(i) for i in range(p_num_args)),
                             ' '.join('y' + str(i) for i in range(c_num_args)))
                         axioms.add(axiom)
+                        #extract features of these candidates by type, ngram, WN(sim, relation), W2V, RTE_gold
+                        c_ph_word = re.sub("_", "", p)
+                        p_ph_word = re.sub("_", "", premise_pred)
+                        typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
+                        ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
+                        wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
+                        word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
+                        simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
+                        wordnetrel = check_wordnetrel(c_ph_word, p_ph_word)
+                        rte = check_rte(expected)
+                        feature = simlist + wordnetrel + rte
+                        #print(axiom, feature)
+                        features.append(feature)
                         covered_conclusions.add(p)
-    print(axioms) # this is a list of tuples of lists.
-    coq_lists = coq_script_debug.split("\n")
-    param_lists = [re.sub("Parameter ", "", coq_list) for coq_list in coq_lists if re.search("Parameter", coq_list)]
-    type_lists = [param_list.split(":") for param_list in param_lists]
 
-    #extract features of these candidates by type, ngram, WN(sim, relation), W2V, RTE_gold
-    for phrase_pair in phrase_pairs:
-        p_ph_preds, c_ph_preds = phrase_pair[0], phrase_pair[1]
-        for c_ph_pred in c_ph_preds:
-            for p_ph_pred in p_ph_preds:
-                c_ph_word = re.sub("_", "", c_ph_pred)
-                p_ph_word = re.sub("_", "", p_ph_pred)
-                typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
-                ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
-                wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
-                word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
-                simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
-                wordnetrel = check_wordnetrel(c_ph_word, p_ph_word)
-                rte = check_rte(expected)
-                features = simlist + wordnetrel + rte
-                print(c_ph_pred, p_ph_pred, features)
+    #print(phrase_pairs) # this is a list of tuples of lists.
 
     #to do2: create different antonym axioms based on types
     # if type is Entity -> Prop, then create axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
     # if tyoe is Event -> Prop, axiom = 'Axiom ax_{0}_{1}_{2} : forall F x y, _{1} x -> _{2} y -> F (Subj x) -> F (Subj y)  -> False.'\
 
-    return axioms
+    return axioms, features
 
 def check_types(pred, type_lists):
     for type_list in type_lists:
