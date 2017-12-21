@@ -446,7 +446,7 @@ def main():
     for command in commands:
         train, trial = [], []
         command = command.strip()
-        lines = command.split(" ")
+        lines = command.split("\t")
         name = lines[0]
         if re.search("\,", lines[1]):
        	    train = [i for i in re.split(r',',lines[1]) if i != '']

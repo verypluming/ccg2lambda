@@ -207,6 +207,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
                 nums = train[0].split(":")
                 train_sources = train_sources[:, int(nums[0]):int(nums[1])]
             else:
+                train_sources_new = train_sources
                 for i, t in enumerate(train):
                     nums = t.split(":")
                     if i == 0:
@@ -220,6 +221,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
                 nums = trial[0].split(":")
                 trial_sources = trial_sources[:, int(nums[0]):int(nums[1])]
             else:
+                trial_sources_new = trial_sources
                 for i, t in enumerate(trial):
                     nums = t.split(":")
                     if i == 0:
@@ -385,7 +387,7 @@ def main():
     for command in commands:
         train, trial = [], []
         command = command.strip()
-        lines = command.split(" ")
+        lines = command.split("\t")
         name = lines[0]
         if re.search("\,", lines[1]):
             train = [i for i in re.split(r',',lines[1]) if i != '']
