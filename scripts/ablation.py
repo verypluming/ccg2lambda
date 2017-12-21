@@ -254,7 +254,7 @@ def plot_deviation(outputs, actual):
     plt.savefig('./results/result.png', bbox_inches='tight')
 
 def write_for_evaluation(outputs, sick_ids, trial_targets, name):
-    with open('./results_20170921_WN/'+name+'_all_result.txt', 'w') as out_f:
+    with open('./results/'+name+'_all_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tentailment_judgment\trelatedness_score\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
@@ -281,7 +281,7 @@ def write_for_evaluation(outputs, sick_ids, trial_targets, name):
 
 
 def output_errors(outputs, gold, sick_ids, sick_sentences, name):
-    with open('./results_20170921_WN/'+name+'_error_result.txt', 'w') as out_f:
+    with open('./results/'+name+'_error_result.txt', 'w') as out_f:
         out_f.write('pair_ID\tdiff\tpred\tcorr\tsentence1\tsentence2\n')
         errs = []
         for i, line in enumerate(outputs):
@@ -367,7 +367,8 @@ def spearman(x, y):
 ## root mean squared arror
 def rmse(x, y):
     ## x:targets y:predictions
-    return np.sqrt(((y - x) ** 2).mean())
+    #return np.sqrt(((y - x) ** 2).mean())
+    return ((y - x) ** 2).mean(axis=0)
 
 def main():
     # Load sick data
@@ -378,7 +379,7 @@ def main():
     print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
 
 
-    g = open("./ablation.txt", "r")
+    g = open("./ablation_new.txt", "r")
     commands = g.readlines()
     g.close()
     for command in commands:
@@ -407,7 +408,7 @@ def main():
 
         x = np.loadtxt(outputs, dtype=np.float32)
         y = np.loadtxt(trial_targets, dtype=np.float32)
-        with open('./results_20170921_WN/'+name+'_evaluation.txt', 'w') as eval_f:
+        with open('./results/'+name+'_evaluation.txt', 'w') as eval_f:
             ## pearson correlation
             r, p = pearsonr(x, y)
             eval_f.write('pearson: {r}\n'.format(r=r))

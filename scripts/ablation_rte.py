@@ -260,7 +260,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./results_20170921_WN/all/features_np_again.pickle', 'rb') as in_f:
+        with open('./results_20170921WN/all/features_np_again.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             if len(train) == 1:
                 nums = train[0].split(":")
@@ -315,14 +315,14 @@ def plot_deviation(outputs, actual):
     plt.savefig('./results/result.png', bbox_inches='tight')
 
 def write_for_evaluation(outputs, sick_ids, trial_targets, name):
-    with open('./results_20170921_WN/'+name+'_all_result_rte.txt', 'w') as out_f:
+    with open('./results/'+name+'_all_result_rte.txt', 'w') as out_f:
         out_f.write('pair_ID\tentailment_judgment\tcorrect_answer\n')
         for i, line in enumerate(outputs):
             data = line
             out_f.write('{0}\t{1}\t{2}\n'.format(sick_ids[i], data, trial_targets[i]))
 
 def output_errors(outputs, sick_ids, trial_targets, name):
-    with open('./results_20170921_WN/'+name+'_error_result_rte.txt', 'w') as out_f:
+    with open('./results/'+name+'_error_result_rte.txt', 'w') as out_f:
         out_f.write('pair_ID\tpred\tcorr\n')
         errs = []
         for i, line in enumerate(outputs):
@@ -427,7 +427,9 @@ def spearman(x, y):
 ## root mean squared arror
 def rmse(x, y):
     ## x:targets y:predictions
-    return np.sqrt(((y - x) ** 2).mean())
+    #return np.sqrt(((y - x) ** 2).mean())
+    return ((y - x) ** 2).mean(axis=0)
+
 
 def main():
     # Load sick data
@@ -438,7 +440,7 @@ def main():
     #print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
 
 
-    g = open("./ablation.txt", "r")
+    g = open("./ablation_new.txt", "r")
     commands = g.readlines()
     g.close()
     for command in commands:
@@ -459,7 +461,7 @@ def main():
         outputs = clf.predict(trial_sources)
         trial_targets = list(map(str, trial_targets)) 
         outputs = list(map(str, list(outputs)))
-        f = open('./results_20170921_WN/'+name+'_rte_report.txt', 'w')
+        f = open('./results/'+name+'_rte_report.txt', 'w')
         f.write(classification_report(trial_targets, outputs, digits=4))
         f.write(str(accuracy_score(trial_targets, outputs)))
         f.close()
