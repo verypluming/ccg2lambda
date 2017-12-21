@@ -24,7 +24,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import mean_squared_error, classification_report
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import random
 import difflib
 import feature_extraction
