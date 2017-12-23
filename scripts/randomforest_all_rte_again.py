@@ -245,7 +245,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./'+results+'/all/features_np.pickle', 'rb') as in_f:
+        with open('./'+results+'/all/features_np_again.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             #train_sources = np.hstack((train_sources[:, 0:15], train_sources[:, 22:23], train_sources[:, 30:54]))
             #train_sources = train_sources[:, 6:54]
