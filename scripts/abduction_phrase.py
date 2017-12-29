@@ -81,19 +81,21 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output_lines = [line.decode('utf-8').strip()
                     for line in process.stdout.readlines()]
+    premise_lines = get_premise_lines(output_lines)
+    conclusion = get_conclusion_lines(output_lines)
     if is_theorem_almost_defined(output_lines):
         if expected == target:
             #positive label
-            features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected}
+            features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
         else:
             #negative label
-            features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected}
+            features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
         return expected, [new_coq_script], previous_axioms, features
-    premise_lines = get_premise_lines(output_lines)
+    #premise_lines = get_premise_lines(output_lines)
     #for phrase extraction, check all relations between premise_lines and conclusions
-    conclusion = get_conclusion_lines(output_lines)
+    #conclusion = get_conclusion_lines(output_lines)
     if not premise_lines or not conclusion:
         failure_log = {"type error": has_type_error(output_lines),
                        "open formula": has_open_formula(output_lines)}
@@ -111,11 +113,11 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
     if inference_result_str == target:
         #positive label
-        features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected}
+        features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
     else:
         #negative label
-        features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected}
+        features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
     return inference_result_str, [new_coq_script], axioms, features
 
