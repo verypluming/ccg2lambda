@@ -44,9 +44,10 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
             'Axiom ax_ex_phrase_cut_into : forall x0 y0 y1, _cut x0 -> _into y0 y1.',
             'Axiom ax_ex_phrase_up_into : forall x0 y0 y1, _up x0 -> _into y0 y1.',
             'Axiom ax_ex_phrase_up_piece : forall x0 y0, _up x0 -> _piece y0.',
-            'Axiom ax_ex_phrase_precisely_into : forall x0 y0 y1, _precisely x0 -> _into y0 y1.'
+            'Axiom ax_ex_phrase_precisely_into : forall x0 y0 y1, _precisely x0 -> _into y0 y1.',
+            'Axiom ax_ex_phrase_lady_woman : forall x0 y0, _lady x0 -> _woman y0.'
         ])
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 
@@ -81,7 +82,7 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
             'Axiom ax_ex_phrase_protective_use : forall x0 y0, _protective x0 -> _use y0.',
             'Axiom ax_ex_phrase_protective_protection : forall x0 y0, _protective x0 -> _protection y0.'
         ])
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 
@@ -99,7 +100,7 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
             'Axiom ax_ex_phrase_skip_street : forall x0 y0, _skip x0 -> _street y0.',
             'Axiom ax_ex_phrase_skip_near : forall x0 y0 y1, _skip x0 -> _near y0 y1.'])
         # from pudb import set_trace; set_trace()
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 
@@ -122,7 +123,7 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
         'Axiom ax_ex_phrase_water_for : forall x0 y0 y1, _water x0 -> _for y0 y1.'
         ])
 
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 
@@ -146,7 +147,7 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
             'Axiom ax_ex_phrase_machine_for : forall x0 y0 y1, _machine x0 -> _for y0 y1.',
             'Axiom ax_ex_phrase_machine_sewing : forall x0 y0, _machine x0 -> _sewing y0.'])
         # from pudb import set_trace; set_trace()
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 
@@ -178,7 +179,7 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
             'Axiom ax_ex_phrase_have_over : forall x0 y0 y1, _have x0 -> _over y0 y1.',
             'Axiom ax_ex_phrase_leap_barrier : forall x0 y0, _leap x0 -> _barrier y0.'
         ])
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 
@@ -212,7 +213,7 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
             'Axiom ax_ex_phrase_snow_in : forall x4 y0 y2, _snow x4 -> _in y0 y2.',
             'Axiom ax_ex_phrase_snow_air : forall x4 y2, _snow x4 -> _air y2.'
             ])
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 
@@ -236,7 +237,7 @@ class EstimateExistentialVariablesTestCase(unittest.TestCase):
             'Axiom ax_ex_phrase_scout_people : forall x0 y0, _scout (Subj x0) -> _people (Subj y0).',
             'Axiom ax_ex_phrase_hike_walk : forall x0 y0, _hike x0 -> _walk y0.'
             ])
-        axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
+        axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
         self.assertEqual(expected_axioms, axioms,
             msg="\n{0} vs. {1}".format(expected_axioms, axioms))
 

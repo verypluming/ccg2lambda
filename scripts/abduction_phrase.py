@@ -14,6 +14,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
 from __future__ import print_function
 from collections import OrderedDict, defaultdict
 import json
@@ -68,45 +69,7 @@ def TryPhraseAbduction(coq_scripts, target):
     all_scripts = direct_proof_scripts + reverse_proof_scripts
     axioms = current_axioms
     return inference_result_str, all_scripts
-
-def TryPhraseAbduction_bk(coq_scripts, target):
-    assert len(coq_scripts) == 2
-    direct_proof_script = coq_scripts[0]
-    reverse_proof_script = coq_scripts[1]
-    axioms = set()
-    direct_proof_scripts, reverse_proof_scripts = [], []
-    inference_result_str, all_scripts = "unknown", []
-    while inference_result_str == "unknown":
-        #continue abduction for phrase acquisition until inference_result_str matches target
-        #if target == 'yes':
-        #    #entailment proof
-        #    inference_result_str, direct_proof_scripts, new_direct_axioms = \
-        #        try_phrase_abduction(direct_proof_script,
-        #                      previous_axioms=axioms, expected='yes')
-        #    current_axioms = axioms.union(new_direct_axioms)
-        #elif target == 'no':
-        #    #contradiction proof
-        #    inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-        #        try_phrase_abduction(reverse_proof_script,
-        #                      previous_axioms=axioms, expected='no')
-        #    entailment proof
-        inference_result_str, direct_proof_scripts, new_direct_axioms = \
-            try_phrase_abduction(direct_proof_script,
-                              previous_axioms=axioms, expected='yes')
-        current_axioms = axioms.union(new_direct_axioms)
-        if not inference_result_str == 'yes':
-            #contradiction proof
-            inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-                try_phrase_abduction(reverse_proof_script,
-                              previous_axioms=axioms, expected='no')
-            current_axioms = axioms.update(new_reverse_axioms)
-        all_scripts = direct_proof_scripts + reverse_proof_scripts
-        if len(axioms) == len(current_axioms):
-            break
-        axioms = current_axioms
-    return inference_result_str, all_scripts
     
-
 def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expected='yes', target='yes'):
     new_coq_script = insert_axioms_in_coq_script(previous_axioms, coq_script)
     current_tactics = get_tactics()
@@ -176,12 +139,6 @@ def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='y
     #            conclusion, premise_preds, conclusion, premises, coq_output_lines)
     #        print(json.dumps(failure_log), file=sys.stderr)
     return axioms, features
-
-def make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion_pred, pred_args, expected):
-    axioms = set()
-    phrase_axioms = get_phrases(premise_preds, conclusion_pred, pred_args, expected)
-    axioms.update(set(phrase_axioms))
-    return axioms
 
 def get_conclusion_lines(coq_output_lines):
     conclusion_lines = []
@@ -287,36 +244,6 @@ def is_theorem_almost_defined(output_lines):
     else:
         return True
 
-def get_premises_that_partially_match_conclusion_args(premises, conclusion):
-    """
-    Returns premises where the predicates have at least one argument
-    in common with the conclusion.
-    In this function, premises containing False are excluded temporarily. For example,
-    H0 : forall x : Entity,
-       ((_man x /\ (exists e : Event, (_drawing e /\ Subj e = x) /\ True)) /\
-        True) /\ (exists e : Event, Subj e = Subj e /\ True) -> False
-    to do: how to exclude such an premise perfectly
-    """
-    candidate_premises = []
-    conclusion = re.sub(r'\?([0-9]+)', r'?x\1', conclusion)
-    conclusion_args = get_tree_pred_args(conclusion, is_conclusion=True)
-    if conclusion_args is None:
-        return candidate_premises
-    for premise_line in premises:
-        # Convert anonymous variables of the form ?345 into ?x345.
-        premise_line = re.sub(r'\?([0-9]+)', r'?x\1', premise_line)
-        premise_args = get_tree_pred_args(premise_line)
-        #print('Conclusion args: ' + str(conclusion_args) +
-        #              '\nPremise args: ' + str(premise_args), file=sys.stderr)
-        #if tree_contains(premise_args, conclusion_args):
-        if premise_args is None or "exists" in premise_line or "=" in premise_line or "forall" in premise_line or "/\\" in premise_line:
-            # ignore relation premises temporarily
-            continue
-        else:
-            candidate_premises.append(premise_line)
-    #print(candidate_premises, file=sys.stderr)
-    return candidate_premises
-
 def get_tree_pred_args_ex(line, is_conclusion=False):
     """
     Given the string representation of a premise, where each premise is:
@@ -380,12 +307,15 @@ def check_decomposed(line):
         return False
     return True
 
-def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected):
-    coq_lists = coq_script_debug.split("\n")
-    param_lists = [re.sub("Parameter ", "", coq_list) for coq_list in coq_lists if re.search("Parameter", coq_list)]
-    type_lists = [param_list.split(":") for param_list in param_lists]
+def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug=None, expected="yes"):
+    coq_lists, param_lists, type_lists = [], [], []
+    if coq_script_debug:
+        coq_lists = coq_script_debug.split("\n")
+        param_lists = [re.sub("Parameter ", "", coq_list) for coq_list in coq_lists if re.search("Parameter", coq_list)]
+        type_lists = [param_list.split(":") for param_list in param_lists]
     features = {}
     covered_conclusions = set()
+    used_premises = set()
     axioms = []
     phrase_pairs = []
     premises = [p for p in premises if get_pred_from_coq_line(p).startswith('_') and check_decomposed(p)]
@@ -421,7 +351,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 c_args_preds[targs].update(preds)
 
     #create axioms about sub-goals with existential variables containing case information
-    case_c_preds = [c for c, c_args in c_pred_args.items() if re.search("\?", str(c_args)) and contains_case(str(c_args)) and len(c_args[0]) == 1]
+    case_c_preds = [c for c, c_args in c_pred_args.items() if contains_case(str(c_args)) and len(c_args[0]) == 1]
     for case_c_pred in case_c_preds:
         case_c_arg = c_pred_args[case_c_pred][0][0]
         case_c_arg = re.sub(r'\?([0-9]+)', r'x\1', case_c_arg)
@@ -443,7 +373,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
                 word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
                 simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
-                wordnetrel = check_wordnetrel(c_ph_word, p_ph_word)
+                wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
                 feature = simlist + wordnetrel
                 if antonym == 1.0 and "Event -> Prop" in check_types(c_ph_word, type_lists):
@@ -456,7 +386,6 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     axiom = 'Axiom ax_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
                         p_pred,
                         case_c_pred)
-                    covered_conclusions.add(case_c_pred)
                 elif antonym == 1.0:
                     #check if entailment axiom was generated
                     exist_axioms = [axiom for axiom in axioms if p in axiom]
@@ -467,11 +396,11 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     axiom = 'Axiom ax_antonym{0}{1} : forall x, {0} x -> {1} x -> False.'.format(
                         p_pred,
                         case_c_pred)
-                    covered_conclusions.add(case_c_pred)
-                #print(axiom, feature)
+
+                used_premises.add(p_pred)
+                covered_conclusions.add(case_c_pred)
                 axioms.append(axiom)
                 features[axiom] = feature
-
 
     #create axioms about sub-goals without case information
     exclude_preds_in_conclusion = {
@@ -488,11 +417,15 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
             if premise_preds:
                 phrase_pairs.append((premise_preds, c_preds)) # Saved phrase pairs for Yanaka-san.
                 for premise_pred in premise_preds:
-                #premise_pred = premise_preds[0] #not only the first premise, but all premises are selected
+                    #if the premise has been already used for axiom containing cases(ex. lady(Subj x) -> woman(Subj x), it will be unnecessary)
+                    if premise_pred in used_premises:
+                        continue
+                    #premise_pred = premise_preds[0] #not only the first premise, but all premises are selected
                     for p in c_preds:
                         if p not in covered_conclusions:
                             c_num_args = max(len(cargs) for cargs in c_pred_args[p])
                             p_num_args = len(p_pred_args[premise_pred])
+                            #print(premise_pred, p, p_pred_args[premise_pred], c_pred_args[p])
                             axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
                                 premise_pred,
                                 p,
@@ -538,10 +471,6 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         #covered_conclusions.add(p)
 
     #print(phrase_pairs) # this is a list of tuples of lists.
-
-    #to do2: create different antonym axioms based on types
-    # if type is Entity -> Prop, then create axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
-    # if tyoe is Event -> Prop, axiom = 'Axiom ax_{0}_{1}_{2} : forall F x y, _{1} x -> _{2} y -> F (Subj x) -> F (Subj y)  -> False.'\
 
     return set(axioms), features
 
@@ -608,6 +537,45 @@ def calc_argumentsim(sub_pred, prem_pred, pred_args):
         return 0.5
     else:
         return 0.0
+
+
+#unused functions
+def TryPhraseAbduction_bk(coq_scripts, target):
+    assert len(coq_scripts) == 2
+    direct_proof_script = coq_scripts[0]
+    reverse_proof_script = coq_scripts[1]
+    axioms = set()
+    direct_proof_scripts, reverse_proof_scripts = [], []
+    inference_result_str, all_scripts = "unknown", []
+    while inference_result_str == "unknown":
+        #continue abduction for phrase acquisition until inference_result_str matches target
+        #if target == 'yes':
+        #    #entailment proof
+        #    inference_result_str, direct_proof_scripts, new_direct_axioms = \
+        #        try_phrase_abduction(direct_proof_script,
+        #                      previous_axioms=axioms, expected='yes')
+        #    current_axioms = axioms.union(new_direct_axioms)
+        #elif target == 'no':
+        #    #contradiction proof
+        #    inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
+        #        try_phrase_abduction(reverse_proof_script,
+        #                      previous_axioms=axioms, expected='no')
+        #    entailment proof
+        inference_result_str, direct_proof_scripts, new_direct_axioms = \
+            try_phrase_abduction(direct_proof_script,
+                              previous_axioms=axioms, expected='yes')
+        current_axioms = axioms.union(new_direct_axioms)
+        if not inference_result_str == 'yes':
+            #contradiction proof
+            inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
+                try_phrase_abduction(reverse_proof_script,
+                              previous_axioms=axioms, expected='no')
+            current_axioms = axioms.update(new_reverse_axioms)
+        all_scripts = direct_proof_scripts + reverse_proof_scripts
+        if len(axioms) == len(current_axioms):
+            break
+        axioms = current_axioms
+    return inference_result_str, all_scripts
 
 def make_phrases_from_premises_and_conclusions_ex_(premises, conclusions):
     premises = [p for p in premises if get_pred_from_coq_line(p).startswith('_')]
@@ -735,3 +703,39 @@ def get_predicate_case_arguments(premises, conclusion):
     #for conf_pred in conflicting_predicates:
     #    del pred_args[conf_pred]
     return pred_args
+
+def get_premises_that_partially_match_conclusion_args(premises, conclusion):
+    """
+    Returns premises where the predicates have at least one argument
+    in common with the conclusion.
+    In this function, premises containing False are excluded temporarily. For example,
+    H0 : forall x : Entity,
+       ((_man x /\ (exists e : Event, (_drawing e /\ Subj e = x) /\ True)) /\
+        True) /\ (exists e : Event, Subj e = Subj e /\ True) -> False
+    to do: how to exclude such an premise perfectly
+    """
+    candidate_premises = []
+    conclusion = re.sub(r'\?([0-9]+)', r'?x\1', conclusion)
+    conclusion_args = get_tree_pred_args(conclusion, is_conclusion=True)
+    if conclusion_args is None:
+        return candidate_premises
+    for premise_line in premises:
+        # Convert anonymous variables of the form ?345 into ?x345.
+        premise_line = re.sub(r'\?([0-9]+)', r'?x\1', premise_line)
+        premise_args = get_tree_pred_args(premise_line)
+        #print('Conclusion args: ' + str(conclusion_args) +
+        #              '\nPremise args: ' + str(premise_args), file=sys.stderr)
+        #if tree_contains(premise_args, conclusion_args):
+        if premise_args is None or "exists" in premise_line or "=" in premise_line or "forall" in premise_line or "/\\" in premise_line:
+            # ignore relation premises temporarily
+            continue
+        else:
+            candidate_premises.append(premise_line)
+    #print(candidate_premises, file=sys.stderr)
+    return candidate_premises
+
+def make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion_pred, pred_args, expected):
+    axioms = set()
+    phrase_axioms = get_phrases(premise_preds, conclusion_pred, pred_args, expected)
+    axioms.update(set(phrase_axioms))
+    return axioms
