@@ -83,7 +83,7 @@ target_answer=`cat ${plain_dir}/${sentences_basename/.txt/}.answer`
 # In this case, the target answer changes from "contradiction" to "entailment"
 num=`grep -n " no " ${plain_dir}/${sentences_basename}.tok| sed -e 's/:.*//g'`
 if [ "$num" == 1 ]; then
-  echo "no contains in premise sentence"
+  echo "Info: no contains in premise sentence $sentences_basename"
   sed -i '' -e "1 s/ no / a /g" ${plain_dir}/${sentences_basename}.tok
   if [ "$target_answer" == "yes" ]; then
     target_answer="no"

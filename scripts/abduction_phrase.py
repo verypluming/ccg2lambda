@@ -160,61 +160,6 @@ def get_conclusion_lines(coq_output_lines):
             conclusion_lines.append(line)
     return conclusion_lines
 
-def get_phrases(premise_preds, conclusion_pred, pred_args, expected):
-    #evaluate phrase candidates based on multiple similarities: surface, external knowledge, argument matching
-    #in some cases, considering argument matching only is better
-    axiom, axioms = "", []
-    dist = []
-    copyflg = 0
-    src_preds = [denormalize_token(p) for p in premise_preds]
-    if "False" in conclusion_pred or "=" in conclusion_pred:
-        #skip relational subgoals
-        return list(set(axioms))
-    conclusion_pred = conclusion_pred.split()[0]
-    trg_pred = denormalize_token(conclusion_pred)
-    for src_pred in src_preds:
-        if src_pred == trg_pred:
-            #the same premise can be found(copy)
-            copyflg = 1
-            break
-        wordnetsim = calc_wordnetsim(src_pred, trg_pred)
-        ngramsim = calc_ngramsim(src_pred, trg_pred)
-        argumentsim = calc_argumentsim(src_pred, trg_pred, pred_args)
-        #to consider: add categorysim or parse score for smoothing argument match error
-        #to consider: how to decide the weight of each info(for now, consider no weight)
-        # best score: w_1*wordnetsim + w_2*ngramsim + w_3*argumentsim
-        # w_1+w_2+w_3 = 1
-        # 0 < wordnetsim < 1, 0 < ngramsim < 1, 0 < argumentsim < 1,
-        dist.append(distance.cityblock([1, 1, 1], [wordnetsim, ngramsim, argumentsim]))
-    if copyflg == 1:
-        axiom = 'Axiom ax_copy_{0} : forall x, _{0} x.'\
-        .format(trg_pred)
-        axioms.append(axiom)
-        return list(set(axioms))
-
-    mindist = dist.index(min(dist))
-
-    best_src_pred = src_preds[mindist]
-    best_src_pred_norm = normalize_token(best_src_pred)
-    best_src_pred_arg_list = pred_args[best_src_pred_norm]
-    best_src_pred_arg = " ".join(best_src_pred_arg_list)
-
-    trg_pred_norm = normalize_token(trg_pred)
-    trg_pred_arg_list = pred_args[trg_pred_norm]
-    trg_pred_arg = " ".join(trg_pred_arg_list)
-        
-    total_arg_list = list(set(best_src_pred_arg_list + trg_pred_arg_list))
-    total_arg_list = check_case_from_list(total_arg_list)
-    total_arg = " ".join(total_arg_list)
-        
-    axiom = 'Axiom ax_phrase{0}{1} : forall {2}, {0} {3} -> {1} {4}.'\
-            .format(best_src_pred_norm, trg_pred_norm, total_arg, best_src_pred_arg, trg_pred_arg)
-    print("premise_pred:{0}, conclusion_pred:{1}, pred_args:{2}, axiom:{3}".format(premise_preds, conclusion_pred, pred_args, axiom), file=sys.stderr)
-
-    # to do: consider how to inject antonym axioms
-    axioms.append(axiom)
-    return list(set(axioms))
-
 def check_case_from_list(total_arg_list):
     new_total_arg_list = []
     for t in total_arg_list:
@@ -230,7 +175,7 @@ def is_theorem_almost_defined(output_lines):
     #check if all content subgoals are deleted(remaining relation subgoals can be permitted)
     #ignore relaional subgoals(False, Acc x0=x1) in the proof
     conclusions = get_conclusion_lines(output_lines)
-    print("conclusion:{0}".format(conclusions), file=sys.stderr)
+    #print("conclusion:{0}".format(conclusions), file=sys.stderr)
     subgoalflg = 0
     if len(conclusions) > 0:
         for conclusion in conclusions:
@@ -376,7 +321,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
                 feature = simlist + wordnetrel
-                if antonym == 1.0 and "Event -> Prop" in check_types(c_ph_word, type_lists):
+                if antonym == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
                     #check if entailment axiom was generated
                     exist_axioms = [axiom for axiom in axioms if p in axiom]
                     if len(exist_axioms) > 0:
@@ -386,7 +331,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     axiom = 'Axiom ax_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
                         p_pred,
                         case_c_pred)
-                elif antonym == 1.0:
+                elif antonym == "antonym":
                     #check if entailment axiom was generated
                     exist_axioms = [axiom for axiom in axioms if p in axiom]
                     if len(exist_axioms) > 0:
@@ -400,7 +345,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 used_premises.add(p_pred)
                 covered_conclusions.add(case_c_pred)
                 axioms.append(axiom)
-                features[axiom] = feature
+                features[antonym+p_pred+case_c_pred] = feature
 
     #create axioms about sub-goals without case information
     exclude_preds_in_conclusion = {
@@ -443,7 +388,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                             #rte = check_rte(expected)
                             feature = simlist + wordnetrel
-                            if antonym == 1.0 and "Event -> Prop" in check_types(c_ph_word, type_lists):
+                            if antonym == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
                                 #check if entailment axiom was generated
                                 exist_axioms = [axiom for axiom in axioms if p in axiom]
                                 if len(exist_axioms) > 0:
@@ -454,7 +399,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                                     premise_pred,
                                     p)
                                 covered_conclusions.add(p)
-                            elif antonym == 1.0:
+                            elif antonym == "antonym":
                                 #check if entailment axiom was generated
                                 exist_axioms = [axiom for axiom in axioms if p in axiom]
                                 if len(exist_axioms) > 0:
@@ -467,7 +412,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                                 covered_conclusions.add(p)
                         #print(axiom, feature)
                         axioms.append(axiom)
-                        features[axiom] = feature
+                        features[antonym+premise_pred+p] = feature
                         #covered_conclusions.add(p)
 
     #print(phrase_pairs) # this is a list of tuples of lists.
@@ -496,12 +441,12 @@ def calc_word2vecsim(sub_pred, prem_pred):
         return 0.0
 
 def check_wordnetrel(sub_pred, prem_pred):
-    antonym = 0.0
+    antonym = "phrase"
     rel_list = ['copy', 'inflection', 'derivation', 'synonym', 'antonym', 'hypernym', 'hyponym', 'sister', 'cousin', 'similar']
     relations = linguistic_relationship(prem_pred, sub_pred)
     relation = get_wordnet_cascade(relations)
     if relation == "antonym":
-        antonym = 1.0
+        antonym = "antonym"
     rel_vec = [1.0 if rel == relation else 0.0 for rel in rel_list]
     return rel_vec, antonym
 
@@ -739,3 +684,58 @@ def make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion_p
     phrase_axioms = get_phrases(premise_preds, conclusion_pred, pred_args, expected)
     axioms.update(set(phrase_axioms))
     return axioms
+
+def get_phrases(premise_preds, conclusion_pred, pred_args, expected):
+    #evaluate phrase candidates based on multiple similarities: surface, external knowledge, argument matching
+    #in some cases, considering argument matching only is better
+    axiom, axioms = "", []
+    dist = []
+    copyflg = 0
+    src_preds = [denormalize_token(p) for p in premise_preds]
+    if "False" in conclusion_pred or "=" in conclusion_pred:
+        #skip relational subgoals
+        return list(set(axioms))
+    conclusion_pred = conclusion_pred.split()[0]
+    trg_pred = denormalize_token(conclusion_pred)
+    for src_pred in src_preds:
+        if src_pred == trg_pred:
+            #the same premise can be found(copy)
+            copyflg = 1
+            break
+        wordnetsim = calc_wordnetsim(src_pred, trg_pred)
+        ngramsim = calc_ngramsim(src_pred, trg_pred)
+        argumentsim = calc_argumentsim(src_pred, trg_pred, pred_args)
+        #to consider: add categorysim or parse score for smoothing argument match error
+        #to consider: how to decide the weight of each info(for now, consider no weight)
+        # best score: w_1*wordnetsim + w_2*ngramsim + w_3*argumentsim
+        # w_1+w_2+w_3 = 1
+        # 0 < wordnetsim < 1, 0 < ngramsim < 1, 0 < argumentsim < 1,
+        dist.append(distance.cityblock([1, 1, 1], [wordnetsim, ngramsim, argumentsim]))
+    if copyflg == 1:
+        axiom = 'Axiom ax_copy_{0} : forall x, _{0} x.'\
+        .format(trg_pred)
+        axioms.append(axiom)
+        return list(set(axioms))
+
+    mindist = dist.index(min(dist))
+
+    best_src_pred = src_preds[mindist]
+    best_src_pred_norm = normalize_token(best_src_pred)
+    best_src_pred_arg_list = pred_args[best_src_pred_norm]
+    best_src_pred_arg = " ".join(best_src_pred_arg_list)
+
+    trg_pred_norm = normalize_token(trg_pred)
+    trg_pred_arg_list = pred_args[trg_pred_norm]
+    trg_pred_arg = " ".join(trg_pred_arg_list)
+        
+    total_arg_list = list(set(best_src_pred_arg_list + trg_pred_arg_list))
+    total_arg_list = check_case_from_list(total_arg_list)
+    total_arg = " ".join(total_arg_list)
+        
+    axiom = 'Axiom ax_phrase{0}{1} : forall {2}, {0} {3} -> {1} {4}.'\
+            .format(best_src_pred_norm, trg_pred_norm, total_arg, best_src_pred_arg, trg_pred_arg)
+    print("premise_pred:{0}, conclusion_pred:{1}, pred_args:{2}, axiom:{3}".format(premise_preds, conclusion_pred, pred_args, axiom), file=sys.stderr)
+
+    # to do: consider how to inject antonym axioms
+    axioms.append(axiom)
+    return list(set(axioms))
