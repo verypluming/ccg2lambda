@@ -248,7 +248,7 @@ function parse_depccg() {
         --ifmt "%w|%l|%p \n" \
         --ofmt "%w|%l|%p|%n \n" \
         2> /dev/null | \
-    python2 ${depccg_dir}/src/run.py \
+    python ${depccg_dir}/src/run.py \
         ${depccg_dir}/models/tri_headfirst \
         en \
         --input-format POSandNERtagged \

@@ -22,7 +22,7 @@
 #
 # ./en/eacl2017exp.sh 10 train en/semantic_templates_en_event.yaml
 #
-
+./word2vec.sh
 sick=en/SICK.semeval.txt
 
 # How many processes in parallel you want to run.
@@ -192,3 +192,9 @@ echo "
 " >> $results_dir/main_${dataset}.html
 
 ./ja/accuracy.sh ${results_dir}/main_${dataset}.html > ${results_dir}/score.txt
+
+if [ "$word2vec" == "word2vec" ]; then
+  processid=$(ps ax|grep "word2vec-api.py"|grep -v grep|awk '{print $1}')
+  kill $processid
+fi
+
