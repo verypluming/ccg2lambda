@@ -84,7 +84,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     premise_lines = get_premise_lines(output_lines)
     conclusion = get_conclusion_lines(output_lines)
     if is_theorem_almost_defined(output_lines):
-        if expected == target:
+        if expected == target and target != "unknown":
             #positive label
             features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
@@ -111,7 +111,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     output_lines = [line.decode('utf-8').strip()
                     for line in process.stdout.readlines()]
     inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
-    if inference_result_str == target:
+    if inference_result_str == target and target != "unknown":
         #positive label
         features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
