@@ -50,11 +50,12 @@ def classification(X_train, y_train, X_test, y_test, results):
     #clf = make_pipeline(
     #    preprocessing.StandardScaler(),
     #    GridSearchCV(RandomForestClassifier(), parameters))
-    clf = svm.SVC(C=1.0, gamma=0.001)
+    #clf = svm.SVC(C=1.0, gamma=0.001)
+    clf = svm.SVC(kernel='linear')
     clf.fit(X_train, y_train)
 
     #Serialize
-    #joblib.dump(clf, './'+results+'/phrase.pkl')
+    joblib.dump(clf, './'+results+'/phrase.pkl')
     #clf = joblib.load('./'+results+'/phrase.pkl')
 
     return clf
