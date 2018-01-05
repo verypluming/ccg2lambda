@@ -31,11 +31,33 @@ from sklearn.pipeline import make_pipeline
 from sklearn import preprocessing, linear_model, svm
 from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
-from sklearn.cross_validation import cross_val_score
+from sklearn.cross_validation import cross_val_score, train_test_split
+from keras.models import Sequential
+from keras.layers import Dense, Activation
 
 def crossvalidation(clf, X_train, y_train):
     scores = cross_val_score(clf, X_train, y_train, cv=10)
     return scores.mean(), scores.std()
+
+def multiperceptron(model, train_x, train_y, results):
+    #train_x, test_x, train_y, test_y, indices_train, indices_test = train_test_split(load_source2, load_target2, load_source_phrase2, test_size=0.3)
+    model = Sequential()
+    model.add(Dense(input_dim=14, units=1))
+    model.add(Dense(20, input_dim=14, init='uniform', activation='relu'))
+    model.add(Dense(14, init='uniform', activation='relu'))
+    model.add(Dense(1, init='uniform', activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+    model.fit(train_x, train_y[:, np.newaxis], epochs=5, batch_size=1)
+    model.save('./'+results+'phrase_classifier.mm')
+    #scores = model.evaluate(test_x, test_y)
+    #print("\n")
+    #print(model.metrics_names, scores)
+    #predictions = np.round(model.predict(test_x))
+    #correct = test_y[:, np.newaxis]
+    #extracted correct phrases
+    #print(indices_test[np.array(predictions == correct).flatten()])
+    return model
 
 def classification(X_train, y_train, X_test, y_test, results):
     parameters = {
@@ -119,16 +141,18 @@ def main():
     print ('test size: {0}, training size: {1}'.format(len(trial_targets), len(train_targets)))
     
     # Train the regressor
-    clf = classification(train_sources, train_targets, trial_sources, trial_targets, args.results)
+    #clf = classification(train_sources, train_targets, trial_sources, trial_targets, args.results)
+    #Train multiperceptron with training dataset
+    clf = multiperceptron(source, target, args.results)
 
     # Apply regressor to trial data
-    outputs = clf.predict(trial_sources)
-    all_score(outputs, trial_targets, trial_phrases, args.results)
-    trial_targets = list(map(str, trial_targets))
-    outputs = list(map(str, list(outputs)))
-    f = open('./'+args.results+'/report.txt', 'w')
-    f.write(classification_report(trial_targets, outputs, digits=4))
-    f.close()
+    #outputs = clf.predict(trial_sources)
+    #all_score(outputs, trial_targets, trial_phrases, args.results)
+    #trial_targets = list(map(str, trial_targets))
+    #outputs = list(map(str, list(outputs)))
+    #f = open('./'+args.results+'/report.txt', 'w')
+    #f.write(classification_report(trial_targets, outputs, digits=4))
+    #f.close()
 
     
 
