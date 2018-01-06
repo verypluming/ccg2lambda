@@ -424,7 +424,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
                 feature = simlist + wordnetrel
-                predict = np.round(model.predict(np.array(feature)))
+                predict = np.round(model.predict(np.array([feature])))
                 if predict == 1:
                     #if axiom classifier is 1, create axioms with premises which have the same case 
                     axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
@@ -496,7 +496,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                             #rte = check_rte(expected)
                             feature = simlist + wordnetrel
-                            predict = np.round(model.predict(np.array(feature)) #fix it
+                            predict = np.round(model.predict(np.array([feature])))
                             if predict == 1:
                                 #if axiom classifier is 1, create axioms
                                 axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
