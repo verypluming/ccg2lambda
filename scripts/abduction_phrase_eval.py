@@ -35,6 +35,7 @@ from tree_tools import is_string
 import pandas as pd
 from linguistic_tools import linguistic_relationship, get_wordnet_cascade
 from keras.models import load_model
+import numpy as np
 
 model = load_model('./phrase_classifier.mm')
 
@@ -94,7 +95,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
                        "open formula": has_open_formula(output_lines)}
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms
-    axioms = make_phrase_axioms(premise_lines, conclusions, output_lines, expected)
+    axioms = make_phrase_axioms(premise_lines, conclusions, output_lines, expected, coq_script_debug)
     #axioms = filter_wrong_axioms(axioms, coq_script) temporarily
     axioms = axioms.union(previous_axioms)
     new_coq_script = insert_axioms_in_coq_script(axioms, coq_script_debug)
@@ -107,7 +108,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
     inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
     return inference_result_str, [new_coq_script], axioms
 
-def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes'):
+def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None):
     #check premises and sub-goals, search for their relations from sqlite, select axioms
     axioms = set()
     axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected)
@@ -495,7 +496,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                             #rte = check_rte(expected)
                             feature = simlist + wordnetrel
-                            predict = np.round(model.predict(np.array(feature)))
+                            predict = np.round(model.predict(np.array(feature)) #fix it
                             if predict == 1:
                                 #if axiom classifier is 1, create axioms
                                 axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(

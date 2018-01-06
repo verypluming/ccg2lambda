@@ -39,7 +39,7 @@ def crossvalidation(clf, X_train, y_train):
     scores = cross_val_score(clf, X_train, y_train, cv=10)
     return scores.mean(), scores.std()
 
-def multiperceptron(model, train_x, train_y, results):
+def multiperceptron(train_x, train_y, results):
     #train_x, test_x, train_y, test_y, indices_train, indices_test = train_test_split(load_source2, load_target2, load_source_phrase2, test_size=0.3)
     model = Sequential()
     model.add(Dense(input_dim=14, units=1))
@@ -48,8 +48,8 @@ def multiperceptron(model, train_x, train_y, results):
     model.add(Dense(1, init='uniform', activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    model.fit(train_x, train_y[:, np.newaxis], epochs=5, batch_size=1)
-    model.save('./'+results+'phrase_classifier.mm')
+    model.fit(train_x, train_y[:, np.newaxis], epochs=20, batch_size=5)
+    model.save('./'+results+'/phrase_classifier.mm')
     #scores = model.evaluate(test_x, test_y)
     #print("\n")
     #print(model.metrics_names, scores)
@@ -84,7 +84,9 @@ def classification(X_train, y_train, X_test, y_test, results):
 
 def load_features(recalc=None, results=None):
     if recalc == 1:
-        files = glob.glob(results+"/sick_*.err")
+        files = glob.glob(results+"/sick_train_*.err")
+        files2 = glob.glob(results+"/sick_trial_*.err")
+        files = files + files2
         target = []
         source = []
         source_phrase = []
@@ -143,7 +145,7 @@ def main():
     # Train the regressor
     #clf = classification(train_sources, train_targets, trial_sources, trial_targets, args.results)
     #Train multiperceptron with training dataset
-    clf = multiperceptron(source, target, args.results)
+    clf = multiperceptron(np.array(source), np.array(target), args.results)
 
     # Apply regressor to trial data
     #outputs = clf.predict(trial_sources)
