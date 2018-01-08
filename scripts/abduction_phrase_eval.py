@@ -37,7 +37,7 @@ from linguistic_tools import linguistic_relationship, get_wordnet_cascade
 from keras.models import load_model
 import numpy as np
 
-model = load_model('./phrase_results/phrase_classifier.mm')
+model = load_model('./phrase_results2/phrase_classifier.mm')
 
 class AxiomsPhraseEval(object):
     """
