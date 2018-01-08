@@ -242,7 +242,10 @@ def get_pred_from_coq_line(line, is_conclusion=False):
     if is_conclusion:
         return line.split()[0]
     else:
-        return line.split()[2]
+        if len(line.split()) > 2:
+            return line.split()[2]
+        else:
+            return line.split()[0]
     raise(ValueError("Strange coq line: {0}".format(line)))
 
 def check_decomposed(line):
