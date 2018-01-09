@@ -113,6 +113,7 @@ def load_features(recalc=None, results=None):
         target = []
         source = []
         source_phrase = []
+        filenames = []
         for file in files:
             f = open(file,"r")
             filename = re.search("sick_([a-z]*_[0-9]*)\.", file).group(1)
@@ -128,7 +129,7 @@ def load_features(recalc=None, results=None):
                         target.append(score)
                         source.append(feature)
                         source_phrase.append(kind)
-                
+                        filenames.append(filename)
             except:
                 continue
 
@@ -136,11 +137,13 @@ def load_features(recalc=None, results=None):
             np.save(out_f, target)
             np.save(out_f, source)
             np.save(out_f, source_phrase)
+            np.save(out_f, filenames)
     else:
         with open(results+'/features.pickle', 'rb') as in_f:
             target = np.load(in_f)
             source = np.load(in_f)
             source_phrase = np.load(in_f)
+            filenames = np.load(in_f)
     return target, source, source_phrase
 
 def all_score(outputs, trial_targets, phrases, results):
