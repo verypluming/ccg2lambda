@@ -310,7 +310,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
         for p_pred, p_args in p_pred_args.items():
             if re.search(pat, p_args[0]):
                 #create axioms with premises which have the same case 
-                axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
+                axiom = 'Axiom ax_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
                         p_pred,
                         case_c_pred,
                         "x0",
@@ -376,7 +376,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             c_num_args = max(len(cargs) for cargs in c_pred_args[p])
                             p_num_args = len(p_pred_args[premise_pred])
                             #print(premise_pred, p, p_pred_args[premise_pred], c_pred_args[p])
-                            axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
+                            axiom = 'Axiom ax_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
                                 premise_pred,
                                 p,
                                 ' '.join('x' + str(i) for i in range(p_num_args)),
@@ -418,11 +418,30 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         #print(axiom, feature)
                         axioms.append(axiom)
                         features[antonym+premise_pred+p] = feature
-                        #covered_conclusions.add(p)
 
+    #select premise features whose similarity are max and min
+    sum_dist = {}
+    feature_dist = {}
+    return_feature = {}
+    for k, v in features.items():
+        keys = k.split("_")
+        relation, premise, subgoal = keys[0], keys[1], keys[2]
+        if subgoal in sum_dist:
+            sum_dist[subgoal][premise] = sum(v)
+            feature_dist[subgoal][premise] = v
+        else:
+            sum_dist[subgoal] = {premise: sum(v)}
+            feature_dist[subgoal] = {premise: v}
+
+    for s, f in sum_dist.items():
+        max_premise = max(f.items(), key=lambda x:x[1])[0]
+        min_premise = min(f.items(), key=lambda x:x[1])[0]
+        max_feature = feature_dist[s][max_premise]
+        min_feature = feature_dist[s][min_premise]
+        return_feature[max_premise+"_"+min_premise+"_"+s] = max_feature + min_feature
     #print(phrase_pairs) # this is a list of tuples of lists.
 
-    return set(axioms), features
+    return set(axioms), return_feature
 
 def check_types(pred, type_lists):
     for type_list in type_lists:
@@ -580,7 +599,7 @@ def make_phrases_from_premises_and_conclusions_ex_(premises, conclusions):
                     if p not in covered_conclusions:
                         c_num_args = len(c_pred_args[p])
                         p_num_args = len(p_pred_args[premise_pred])
-                        axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
+                        axiom = 'Axiom ax_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
                             premise_pred,
                             p,
                             ' '.join('x' + str(i) for i in range(p_num_args)),

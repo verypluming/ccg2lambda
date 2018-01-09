@@ -34,22 +34,45 @@ from sklearn.externals import joblib
 from sklearn.cross_validation import cross_val_score, train_test_split
 from keras.models import Sequential
 from keras.layers import Dense, Activation
+from keras.wrappers.scikit_learn import KerasClassifier
 
 def crossvalidation(clf, X_train, y_train):
     scores = cross_val_score(clf, X_train, y_train, cv=10)
     return scores.mean(), scores.std()
 
+def base_model(activation="relu", optimizer="adam", out_dim=20):
+    base_model = Sequential()
+    base_model.add(Dense(input_dim=14, units=1))
+    base_model.add(Dense(out_dim, input_dim=14, init='uniform', activation=activation))
+    base_model.add(Dense(14, init='uniform', activation=activation))
+    base_model.add(Dense(1, init='uniform', activation='sigmoid'))
+    base_model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    return base_model
+
 def multiperceptron(train_x, train_y, results):
     #train_x, test_x, train_y, test_y, indices_train, indices_test = train_test_split(load_source2, load_target2, load_source_phrase2, test_size=0.3)
-    model = Sequential()
-    model.add(Dense(input_dim=14, units=1))
-    model.add(Dense(20, input_dim=14, init='uniform', activation='relu'))
-    model.add(Dense(14, init='uniform', activation='relu'))
-    model.add(Dense(1, init='uniform', activation='sigmoid'))
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    activation = ["relu", "sigmoid"]
+    optimizer = ["adam", "adagrad"]
+    out_dim = [20, 50, 100, 200]
+    epochs = [20, 50]
+    batch_size = [5, 10]
 
-    model.fit(train_x, train_y[:, np.newaxis], epochs=20, batch_size=5)
-    model.save('./'+results+'/phrase_classifier.mm')
+    # create model    
+    model = KerasClassifier(build_fn=base_model, verbose=1)
+    
+    # grid search
+    param_grid = dict(activation=activation, 
+                optimizer=optimizer, 
+                out_dim=out_dim, 
+                epochs=epochs, 
+                batch_size=batch_size)
+    grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=5)
+    
+    # Fit the model
+    grid_result = grid.fit(train_x, train_y[:, np.newaxis])
+    print ("best_score:{0}, best_params:{1}".format(grid_result.best_score_, grid_result.best_params_))
+
+    grid.save('./'+results+'/phrase_classifier.mm')
     #scores = model.evaluate(test_x, test_y)
     #print("\n")
     #print(model.metrics_names, scores)
@@ -57,7 +80,7 @@ def multiperceptron(train_x, train_y, results):
     #correct = test_y[:, np.newaxis]
     #extracted correct phrases
     #print(indices_test[np.array(predictions == correct).flatten()])
-    return model
+    return grid
 
 def classification(X_train, y_train, X_test, y_test, results):
     parameters = {

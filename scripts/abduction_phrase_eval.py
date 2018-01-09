@@ -427,40 +427,37 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
                 feature = simlist + wordnetrel
-                predict = np.round(model.predict(np.array([feature])))
-                if int(predict) == 1:
-                    #if axiom classifier is 1, create axioms with premises which have the same case 
-                    axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
-                        p_pred,
-                        case_c_pred,
-                        "x0",
-                        "y0")
-                    if antonym == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
-                        #check if entailment axiom was generated
-                        exist_axioms = [axiom for axiom in axioms if p in axiom]
-                        if len(exist_axioms) > 0:
-                            for exist_axiom in exist_axioms:
-                                axioms.remove(exist_axiom)
-                        #antonym axiom for event predicates
-                        axiom = 'Axiom ax_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
-                            p_pred,
-                            case_c_pred)
-                    elif antonym == "antonym":
-                        #check if entailment axiom was generated
-                        exist_axioms = [axiom for axiom in axioms if p in axiom]
-                        if len(exist_axioms) > 0:
-                            for exist_axiom in exist_axioms:
-                                axioms.remove(exist_axiom)
-                        #antonym axiom for entity predicates
-                        axiom = 'Axiom ax_antonym{0}{1} : forall x, {0} x -> {1} x -> False.'.format(
-                            p_pred,
-                            case_c_pred)
 
-                    used_premises.add(p_pred)
-                    covered_conclusions.add(case_c_pred)
-                    axioms.append(axiom)
-                else:
-                    continue
+                axiom = 'Axiom ax_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
+                    p_pred,
+                    case_c_pred,
+                    "x0",
+                    "y0")
+                if antonym == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
+                    #check if entailment axiom was generated
+                    exist_axioms = [axiom for axiom in axioms if p in axiom]
+                    if len(exist_axioms) > 0:
+                        for exist_axiom in exist_axioms:
+                            axioms.remove(exist_axiom)
+                    #antonym axiom for event predicates
+                    axiom = 'Axiom ax_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
+                        p_pred,
+                        case_c_pred)
+                elif antonym == "antonym":
+                    #check if entailment axiom was generated
+                    exist_axioms = [axiom for axiom in axioms if p in axiom]
+                    if len(exist_axioms) > 0:
+                        for exist_axiom in exist_axioms:
+                            axioms.remove(exist_axiom)
+                    #antonym axiom for entity predicates
+                    axiom = 'Axiom ax_antonym{0}{1} : forall x, {0} x -> {1} x -> False.'.format(
+                        p_pred,
+                        case_c_pred)
+
+                used_premises.add(p_pred)
+                covered_conclusions.add(case_c_pred)
+                axioms.append(axiom)
+                features[antonym+p_pred+case_c_pred] = feature
 
 
     #create axioms about sub-goals without case information
@@ -499,46 +496,70 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                             #rte = check_rte(expected)
                             feature = simlist + wordnetrel
-                            predict = np.round(model.predict(np.array([feature])))
-                            if int(predict) == 1:
-                                #if axiom classifier is 1, create axioms
-                                axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
+
+                            axiom = 'Axiom ax_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
+                                premise_pred,
+                                p,
+                                ' '.join('x' + str(i) for i in range(p_num_args)),
+                                ' '.join('y' + str(i) for i in range(c_num_args)))
+                            if antonym == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
+                                #check if entailment axiom was generated
+                                exist_axioms = [axiom for axiom in axioms if p in axiom]
+                                if len(exist_axioms) > 0:
+                                    for exist_axiom in exist_axioms:
+                                        axioms.remove(exist_axiom)
+                                #antonym axiom for event predicates
+                                axiom = 'Axiom ax_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
                                     premise_pred,
-                                    p,
-                                    ' '.join('x' + str(i) for i in range(p_num_args)),
-                                    ' '.join('y' + str(i) for i in range(c_num_args)))
-                                if antonym == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
-                                    #check if entailment axiom was generated
-                                    exist_axioms = [axiom for axiom in axioms if p in axiom]
-                                    if len(exist_axioms) > 0:
-                                        for exist_axiom in exist_axioms:
-                                            axioms.remove(exist_axiom)
-                                    #antonym axiom for event predicates
-                                    axiom = 'Axiom ax_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
-                                        premise_pred,
-                                        p)
-                                    covered_conclusions.add(p)
-                                elif antonym == "antonym":
-                                    #check if entailment axiom was generated
-                                    exist_axioms = [axiom for axiom in axioms if p in axiom]
-                                    if len(exist_axioms) > 0:
-                                        for exist_axiom in exist_axioms:
-                                            axioms.remove(exist_axiom)
-                                    #antonym axiom for entity predicates
-                                    axiom = 'Axiom ax_antonym{0}{1} : forall x, {0} x -> {1} x -> False.'.format(
-                                        premise_pred,
-                                        p)
-                                    covered_conclusions.add(p)
+                                    p)
+                                covered_conclusions.add(p)
+                            elif antonym == "antonym":
+                                #check if entailment axiom was generated
+                                exist_axioms = [axiom for axiom in axioms if p in axiom]
+                                if len(exist_axioms) > 0:
+                                    for exist_axiom in exist_axioms:
+                                        axioms.remove(exist_axiom)
+                                #antonym axiom for entity predicates
+                                axiom = 'Axiom ax_antonym{0}{1} : forall x, {0} x -> {1} x -> False.'.format(
+                                    premise_pred,
+                                    p)
+                                covered_conclusions.add(p)
                         #print(axiom, feature)
-                                axioms.append(axiom)
-                            else:
-                                continue
-                        #features[antonym+premise_pred+p] = feature
-                        #covered_conclusions.add(p)
+                        axioms.append(axiom)
+                        features[antonym+premise_pred+p] = feature
+                        
+    #select premise features whose similarity are max and min
+    sum_dist = {}
+    feature_dist = {}
+    return_feature = {}
+    new_axioms = []
+    for k, v in features.items():
+        keys = k.split("_")
+        relation, premise, subgoal = keys[0], keys[1], keys[2]
+        if subgoal in sum_dist:
+            sum_dist[subgoal][premise] = sum(v)
+            feature_dist[subgoal][premise] = v
+        else:
+            sum_dist[subgoal] = {premise: sum(v)}
+            feature_dist[subgoal] = {premise: v}
+
+    for s, f in sum_dist.items():
+        max_premise = max(f.items(), key=lambda x:x[1])[0]
+        min_premise = min(f.items(), key=lambda x:x[1])[0]
+        max_feature = feature_dist[s][max_premise]
+        min_feature = feature_dist[s][min_premise]
+        return_feature[max_premise+"_"+min_premise+"_"+s] = max_feature + min_feature
+        predict = np.round(model.predict(np.array([max_feature + min_feature])))
+        #if axiom classifier is 1, create axioms about the subgoal
+        if int(predict) == 1:
+            pattern = re.compile(s+" : forall")
+            for a in axioms:
+                if re.search(pattern, a):
+                    new_axioms.append(a)
 
     #print(phrase_pairs) # this is a list of tuples of lists.
 
-    return set(axioms)
+    return set(new_axioms)
 
 def check_types(pred, type_lists):
     for type_list in type_lists:
