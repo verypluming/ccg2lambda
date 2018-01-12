@@ -72,7 +72,7 @@ def multiperceptron(train_x, train_y, results):
     grid_result = grid.fit(train_x, train_y[:, np.newaxis])
     print ("best_score:{0}, best_params:{1}".format(grid_result.best_score_, grid_result.best_params_))
 
-    grid.save('./'+results+'/phrase_classifier.mm')
+    grid.model.save('./'+results+'/phrase_classifier.mm')
     #scores = model.evaluate(test_x, test_y)
     #print("\n")
     #print(model.metrics_names, scores)

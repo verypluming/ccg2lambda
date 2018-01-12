@@ -88,7 +88,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
             #positive label
             features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
-        else:
+        elif target == "unknown" and expected != "unknown":
             #negative label
             features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
@@ -115,7 +115,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
         #positive label
         features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
-    else:
+    elif target == "unknown" and inference_result_str != "unknown":
         #negative label
         features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
