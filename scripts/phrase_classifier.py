@@ -216,9 +216,9 @@ def siamese_mlp_model():
 
 def base_model(activation="relu", optimizer="adam", out_dim=20):
     base_model = Sequential()
-    base_model.add(Dense(input_dim=14, units=1))
-    base_model.add(Dense(out_dim, input_dim=14, init='uniform', activation=activation))
-    base_model.add(Dense(14, init='uniform', activation=activation))
+    base_model.add(Dense(input_dim=28, units=1))
+    base_model.add(Dense(out_dim, input_dim=28, init='uniform', activation=activation))
+    base_model.add(Dense(28, init='uniform', activation=activation))
     base_model.add(Dense(1, init='uniform', activation='sigmoid'))
     base_model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
     return base_model
@@ -227,7 +227,7 @@ def multiperceptron(train_x, train_y, results):
     #train_x, test_x, train_y, test_y, indices_train, indices_test = train_test_split(load_source2, load_target2, load_source_phrase2, test_size=0.3)
     activation = ["relu", "sigmoid"]
     optimizer = ["adam", "adagrad"]
-    out_dim = [20, 50, 100, 200]
+    out_dim = [50, 100, 150, 200]
     epochs = [20, 50]
     batch_size = [5, 10]
 
