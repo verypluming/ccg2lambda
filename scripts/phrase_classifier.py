@@ -23,6 +23,11 @@ import scipy as sp
 import argparse
 import random
 import difflib
+from time import time
+import itertools
+import datetime
+from gensim.models import KeyedVectors
+from nltk.corpus import stopwords
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.grid_search import GridSearchCV
@@ -32,9 +37,15 @@ from sklearn import preprocessing, linear_model, svm
 from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
 from sklearn.cross_validation import cross_val_score, train_test_split
-from keras.models import Sequential
-from keras.layers import Dense, Activation
+
+from keras.models import Sequential, Model
+from keras.layers import Dense, Activation, Input, Embedding, LSTM, Merge, Bidirectional, Concatenate
 from keras.wrappers.scikit_learn import KerasClassifier
+from keras.preprocessing.sequence import pad_sequences
+import keras.backend as K
+from keras.optimizers import Adadelta
+from keras.callbacks import ModelCheckpoint
+from keras.utils import plot_model
 
 def crossvalidation(clf, X_train, y_train):
     scores = cross_val_score(clf, X_train, y_train, cv=10)
@@ -80,40 +91,30 @@ def text_to_word_list(text):
 
     return text
 
-def siamese_mlp_model():
-    from nltk.corpus import stopwords
-    from keras.preprocessing.sequence import pad_sequences
-    from keras.models import Model
-    from keras.layers import Input, Embedding, LSTM, Merge, Bidirectional, Dense, Concatenate
-    import keras.backend as K
-    from keras.optimizers import Adadelta
-    from keras.callbacks import ModelCheckpoint
+def siamese_mlp_model(load_source, load_target, load_sick_id, results):
     # concatenate sentence vector obtained from siamese-model and premise-subgoal similarity vector obtained from proof
     # Prepare embedding
     EMBEDDING_FILE = './GoogleNews-vectors-negative300.bin'
-
-    # Load training and test set
-    inputfiles = glob.glob("./plain/sick_*.txt")
-    half = int(len(inputfiles)/2)
-    inputfile_sentences = []
-    for inputfile in inputfiles:
-        filename = re.search("(sick_[a-z]*_[0-9]*).", inputfile).group(1)
-        f = open(inputfile, "r")
-        s = f.readlines()
-        f.close()
-        g = open("./plain2/"+filename+".answer", "r")
-        sim = g.readlines()[0]
-        g.close()
-        inputfile_sentences.append([s[0].strip(), s[1], sim])
-    df = pd.DataFrame(inputfile_sentences, columns=['sentence1', 'sentence2', 'sim'])
-    train_df = df[:half]
-    test_df = df[half:]
-
     stops = set(stopwords.words('english'))
     vocabulary = dict()
     inverse_vocabulary = ['<unk>']  # '<unk>' will never be used, it is only a placeholder for the [0, 0, ....0] embedding
     word2vec = KeyedVectors.load_word2vec_format(EMBEDDING_FILE, binary=True)
-    sentences_cols = ['sentence1', 'sentence2']
+    sentences_cols = ['sentence1', 'sentence2', 'sim']
+    sentences_cols2 = ['sentence1', 'sentence2']
+
+    # Load training and test set
+    inputfile_sentences = []
+    for i, label in enumerate(load_target):
+        f = open("plain/sick_"+load_sick_id[i]+".txt", "r")
+        s = f.readlines()
+        f.close()
+        sim = load_source[i]
+        target = label
+        inputfile_sentences.append([s[0].strip(), s[1], sim, target])
+    df = pd.DataFrame(inputfile_sentences, columns=['sentence1', 'sentence2', 'sim', 'target'])
+    half = int(len(inputfile_sentences)/2)
+    train_df = df[:half]
+    test_df = df[half:]
 
     # Iterate over the sentences only of both training and test datasets
     for dataset in [train_df, test_df]:
@@ -153,17 +154,15 @@ def siamese_mlp_model():
 
     # Split to train validation
     validation_size = 2000
-    training_size = len(train_df) - validation_size
-
     X = train_df[sentences_cols]
-    Y = train_df['sim']
+    Y = train_df['target']
 
     X_train, X_validation, Y_train, Y_validation = train_test_split(X, Y, test_size=validation_size)
 
     # Split to dicts
-    X_train = {'left': X_train.sentence1, 'right': X_train.sentence2}
-    X_validation = {'left': X_validation.sentence1, 'right': X_validation.sentence2}
-    X_test = {'left': test_df.sentence1, 'right': test_df.sentence2}
+    X_train = {'left': X_train.sentence1, 'right': X_train.sentence2, 'sim': X_train.sim}
+    X_validation = {'left': X_validation.sentence1, 'right': X_validation.sentence2, 'sim': X_validation.sim}
+    X_test = {'left': test_df.sentence1, 'right': test_df.sentence2, 'sim': test_df.sim}
 
     # Convert labels to their numpy representations
     Y_train = Y_train.values
@@ -172,6 +171,8 @@ def siamese_mlp_model():
     # Zero padding
     for dataset, side in itertools.product([X_train, X_validation], ['left', 'right']):
         dataset[side] = pad_sequences(dataset[side], maxlen=max_seq_length)
+    X_train['sim'] = pad_sequences(X_train['sim'], maxlen=28)
+    X_validation['sim'] = pad_sequences(X_validation['sim'], maxlen=28)
 
     # Make sure everything is ok
     assert X_train['left'].shape == X_train['right'].shape
@@ -210,8 +211,17 @@ def siamese_mlp_model():
     # Adadelta optimizer, with gradient clipping by norm
     optimizer = Adadelta(clipnorm=gradient_clipping_norm)
     model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    plot_model(model, to_file='./'+results+'/siamese_mlp_model.png', show_shapes=True, show_layer_names=True)
 
-    return model
+    # Start training
+    training_start_time = time()
+
+    trained = model.fit([X_train['left'], X_train['right'], X_train['sim']], Y_train, batch_size=batch_size, epochs=n_epoch,
+                            validation_data=([X_validation['left'], X_validation['right'], X_validation['sim']], Y_validation))
+
+    print("Training time finished.\n{} epochs in {}".format(n_epoch, datetime.timedelta(seconds=time()-training_start_time)))
+    trained.save('./'+results+'/siamese_mlp_model.mm')
+    return trained
 
 
 def base_model(activation="relu", optimizer="adam", out_dim=20):
@@ -323,7 +333,7 @@ def load_features(recalc=None, results=None):
             source = np.load(in_f)
             source_phrase = np.load(in_f)
             filenames = np.load(in_f)
-    return target, source, source_phrase
+    return target, source, source_phrase, filenames
 
 def all_score(outputs, trial_targets, phrases, results):
     with open('./'+results+'/all_result_rte.txt', 'w') as out_f:
@@ -337,7 +347,7 @@ def main():
     args = parser.parse_args()
 
     # Get training and trial features
-    target, source, source_phrase = load_features(0, args.results)
+    target, source, source_phrase, filenames = load_features(1, args.results)
     #random.seed(23)
     #random.shuffle(train)
     #random.shuffle(test)
@@ -351,6 +361,7 @@ def main():
     #clf = classification(train_sources, train_targets, trial_sources, trial_targets, args.results)
     #Train multiperceptron with training dataset
     clf = multiperceptron(np.array(source), np.array(target), args.results)
+    siamese = siamese_mlp_model(np.array(source), np.array(target), np.array(filenames), args.results)
 
     # Apply regressor to trial data
     #outputs = clf.predict(trial_sources)
