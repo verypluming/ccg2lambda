@@ -27,7 +27,7 @@ import difflib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import mean_squared_error, classification_report
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn import preprocessing, linear_model, svm
 from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
@@ -231,22 +231,27 @@ def multiperceptron(train_x, train_y, results):
     epochs = [20, 50]
     batch_size = [5, 10]
 
-    # create model    
-    model = KerasClassifier(build_fn=base_model, verbose=1)
+    # grid search parameter
+    param_grid = dict(mlp__activation=activation, 
+                mlp__optimizer=optimizer, 
+                mlp__out_dim=out_dim, 
+                mlp__epochs=epochs, 
+                mlp__batch_size=batch_size)
+
+    # create pipeline
+    estimators = []
+    estimators.append(('mlp', KerasClassifier(build_fn=base_model, verbose=1)))
+    pipeline = Pipeline(estimators)
+    grid = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=5)
     
-    # grid search
-    param_grid = dict(activation=activation, 
-                optimizer=optimizer, 
-                out_dim=out_dim, 
-                epochs=epochs, 
-                batch_size=batch_size)
-    grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=5)
-    
-    # Fit the model
+    # fit model
     grid_result = grid.fit(train_x, train_y[:, np.newaxis])
+    clf = grid_result.best_estimator_
+    print(grid_result.best_estimator_)
     print ("best_score:{0}, best_params:{1}".format(grid_result.best_score_, grid_result.best_params_))
 
-    grid.model.save('./'+results+'/phrase_classifier.mm')
+    # save model
+    clf.steps[0][1].model.save('./'+results+'/phrase_classifier.mm')
     #scores = model.evaluate(test_x, test_y)
     #print("\n")
     #print(model.metrics_names, scores)
@@ -254,7 +259,7 @@ def multiperceptron(train_x, train_y, results):
     #correct = test_y[:, np.newaxis]
     #extracted correct phrases
     #print(indices_test[np.array(predictions == correct).flatten()])
-    return grid
+    return clf
 
 def classification(X_train, y_train, X_test, y_test, results):
     parameters = {
@@ -332,7 +337,7 @@ def main():
     args = parser.parse_args()
 
     # Get training and trial features
-    target, source, source_phrase = load_features(1, args.results)
+    target, source, source_phrase = load_features(0, args.results)
     #random.seed(23)
     #random.shuffle(train)
     #random.shuffle(test)
