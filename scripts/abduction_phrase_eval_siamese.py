@@ -425,7 +425,9 @@ def embedding_sentence(sentence):
     # to do: embeddings matrix and vocabulary should be created and saved
     # to do: check if the format of sentence vector is correct(not using dataframe)
     from gensim import corpora
+
     # Prepare embedding
+    #APIからロードした方が良いかもしれないhttps://github.com/RaRe-Technologies/gensim-data
     EMBEDDING_FILE = './GoogleNews-vectors-negative300.bin'
     stops = set(stopwords.words('english'))
     #vocabulary = dict()
@@ -445,7 +447,8 @@ def embedding_sentence(sentence):
             inverse_vocabulary.append(word)
         else:
             q2n.append(vocabulary[word])
-
+    #pad_sequenceはsequenceじゃないとつかえない，リストのパディングを考える
+    #predictはふつうにnumpyを指定すれば良いので，新たにdataframeをつくる必要はない
     sentence_vector = pad_sequences(q2n, maxlen=max_seq_length)
     return sentence_vector
 
