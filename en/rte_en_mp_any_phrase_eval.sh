@@ -290,7 +290,7 @@ function proving() {
   parser=$1
   sentences_basename=$2
   start_time=`python -c 'import time; print(time.time())'`
-    timeout 100 python scripts/prove.py \
+    timeout 240 python scripts/prove.py \
       ${parsed_dir}/${sentences_basename}.${parser}.sem.xml \
       --graph_out ${results_dir}/${sentences_basename}.${parser}.html \
       --abduction phrase_eval \

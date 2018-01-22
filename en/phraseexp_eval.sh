@@ -24,7 +24,7 @@
 #
 
 #sick=en/SICK.semeval.txt
-
+./word2vec.sh
 # How many processes in parallel you want to run.
 # The maximum number should be inferior to the number of cores in your machine.
 # Default: 3
@@ -193,3 +193,6 @@ echo "
 " >> $results_dir/main_${dataset}.html
 
 ./ja/accuracy.sh ${results_dir}/main_${dataset}.html > ${results_dir}/score.txt
+processid=$(ps ax|grep "word2vec-api.py"|grep -v grep|awk '{print $1}')
+kill $processid
+

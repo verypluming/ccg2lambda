@@ -193,8 +193,6 @@ echo "
 
 ./ja/accuracy.sh ${results_dir}/main_${dataset}.html > ${results_dir}/score.txt
 
-if [ "$word2vec" == "word2vec" ]; then
-  processid=$(ps ax|grep "word2vec-api.py"|grep -v grep|awk '{print $1}')
-  kill $processid
-fi
+processid=$(ps ax|grep "word2vec-api.py"|grep -v grep|awk '{print $1}')
+kill $processid
 
