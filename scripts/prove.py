@@ -66,7 +66,8 @@ def main(args = None):
         from abduction_phrase import AxiomsPhrase
         abduction = AxiomsPhrase()
     elif args.abduction == "phrase_eval":
-        from abduction_phrase_eval import AxiomsPhraseEval
+        #from abduction_phrase_eval import AxiomsPhraseEval
+        from abduction_phrase_eval_siamese import AxiomsPhraseEval
         abduction = AxiomsPhraseEval()
     elif args.abduction == "subgoal":
         from abduction_subgoal import AxiomsSubgoal

@@ -427,29 +427,28 @@ def embedding_sentence(sentence):
     from gensim import corpora
 
     # Prepare embedding
-    #APIからロードした方が良いかもしれないhttps://github.com/RaRe-Technologies/gensim-data
+    # to do: to be faster, load EMBEDDING_FILE using API https://github.com/RaRe-Technologies/gensim-data
     EMBEDDING_FILE = './GoogleNews-vectors-negative300.bin'
     stops = set(stopwords.words('english'))
     #vocabulary = dict()
-    vocabulary = corpora.Dictionary.load_from_text('sick.txt')
+    g = open('./sick_vocab.txt', 'r')
+    vocabulary = json.load(g)
     inverse_vocabulary = ['<unk>'] # '<unk>' will never be used, it is only a placeholder for the [0, 0, ....0] embedding
     word2vec = KeyedVectors.load_word2vec_format(EMBEDDING_FILE, binary=True)
     q2n = []  # q2n -> sentence numbers representation
-    max_seq_length = xxx # check max_seq_length
+    max_seq_length = 26 # check max_seq_length
     for word in text_to_word_list(sentence):
         # Check for unwanted words
         if word in stops and word not in word2vec.vocab:
             continue
         # Just in case
-        if word not in vocabulary:
-            vocabulary[word] = len(inverse_vocabulary)
-            q2n.append(len(inverse_vocabulary))
-            inverse_vocabulary.append(word)
-        else:
-            q2n.append(vocabulary[word])
-    #pad_sequenceはsequenceじゃないとつかえない，リストのパディングを考える
-    #predictはふつうにnumpyを指定すれば良いので，新たにdataframeをつくる必要はない
-    sentence_vector = pad_sequences(q2n, maxlen=max_seq_length)
+        #if word not in vocabulary:
+        #    vocabulary[word] = len(inverse_vocabulary)
+        #    q2n.append(len(inverse_vocabulary))
+        #    inverse_vocabulary.append(word)
+        #else:
+        q2n.append(vocabulary[word])
+    sentence_vector = pad_sequences([q2n], maxlen=max_seq_length)
     return sentence_vector
 
 def get_sentence_vectors(doc):
@@ -459,10 +458,12 @@ def get_sentence_vectors(doc):
         sentence_surface = ' '.join(tokens[i].xpath('token/@surf'))
         sentence_vector = embedding_sentence(sentence_surface)
         sentence_vectors.append(sentence_vector)
-    return sentence_vectors
+    return np.array(sentence_vectors)
 
 def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, coq_script_debug=None, expected="yes"):
-    #sentence_vectors = get_sentence_vectors(doc) # to do: confirm if doc is correct
+    sentence_vectors = get_sentence_vectors(doc) # to do: confirm if doc is correct
+    t_vector = sentence_vectors[0].reshape(1,26)
+    h_vector = sentence_vectors[1].reshape(1,26)
     coq_lists, param_lists, type_lists = [], [], []
     if coq_script_debug:
         coq_lists = coq_script_debug.split("\n")
@@ -647,7 +648,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, co
         max_feature = feature_dist[s][max_premise]
         min_feature = feature_dist[s][min_premise]
         return_feature[max_premise+"_"+min_premise+"_"+s] = max_feature + min_feature
-        predict = np.round(model.predict(np.array([max_feature + min_feature])))
+        predict = np.round(model.predict([t_vector, h_vector, np.array([max_feature + min_feature]).reshape(1, 28)]))
         #if axiom classifier is 1, create axioms about the subgoal
         if int(predict) == 1:
             pattern = re.compile(s+" : forall")
