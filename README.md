@@ -10,9 +10,8 @@ If you'd like to read README about original ccg2lambda, see [HERE](https://githu
 git checkout japanese_sts
 ```
 
-2. You need to download some python modules, Japanese CCG parsers(Jigg and depccg) and its models
+2. You need to download some python modules, Japanese CCG parser(Jigg) and its models
 by running the following script:
-
 ```bash
 ./ja/download_dependencies.sh
 pip install -r requirements.txt
@@ -21,15 +20,18 @@ pip install -r requirements.txt
 ```bash
 cat ja/parser_location_ja.txt
 jigg:/Users/ccg2lambda/ja/jigg-v-0.4
-depccg:/Users/ccg2lambda/ja/depccg
 ```
 
-4. You also need to download pretrained Word2Vec model and run word2vec-api:
-
-download pretrained [Japanese Wikipedia entity vector](http://www.cl.ecei.tohoku.ac.jp/~m-suzuki/jawiki_vector/)
+4. You also need to download pretrained Word2Vec model([Japanese Wikipedia entity vector](http://www.cl.ecei.tohoku.ac.jp/~m-suzuki/jawiki_vector/)) and run word2vec-api:
 ```bash
 git clone https://github.com/3Top/word2vec-api
 python word2vec-api.py --model entity_vector.model.bin --binary True
+```
+If official `word2vec-api.py` doesn't work, replace this [word2vec-api.py](https://github.com/verypluming/ccg2lambda/tree/japanese_sts/scripts/word2vec-api.py) 
+You can check if `word2vec-api.py` works by:
+```bash
+curl http://localhost:5000/word2vec/similarity?w1=person\&w2=woman
+0.8242756957795436
 ```
 
 5. Try calculating Japanese semantic textual similarity
