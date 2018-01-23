@@ -39,13 +39,20 @@ curl http://localhost:5000/word2vec/similarity?w1=person\&w2=woman
 
 ```bash
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample.txt ja/semantic_templates_ja_event.yaml
+./ja/similarity_ja_mp.sh ja/ja_sts_sample_2.txt ja/semantic_templates_ja_event.yaml
 ```
 
 ## Output
 System output is shown below:
 ```bash
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample.txt ja/semantic_templates_ja_event.yaml
+jigg parsing ja_plain/ja_sts_sample.txt
+semantic parsing ja_parsed/ja_sts_sample.txt.jigg.sem.xml
 judging entailment for ja_parsed/ja_sts_sample.txt.jigg.sem.xml 0.6869064039172997
+./ja/similarity_ja_mp.sh ja/ja_sts_sample2.txt ja/semantic_templates_ja_event.yaml
+jigg parsing ja_plain/ja_sts_sample2.txt
+semantic parsing ja_parsed/ja_sts_sample2.txt.jigg.sem.xml
+judging entailment for ja_parsed/ja_sts_sample2.txt.jigg.sem.xml 0.48305262523263526
 ```
 
 
