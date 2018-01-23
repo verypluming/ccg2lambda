@@ -189,17 +189,23 @@ def prove_doc(doc, abduction=None, similarity=None):
                         #     inference_result_int2 = 0.5
                     else:
                         return inference_result_str, coq_scripts
-        return [inference_result_int1, word_similarity1, axioms1, subgoals_similarity1,\
-        inference_result_int2, word_similarity2, axioms2, subgoals_similarity2,\
-        origin_subgoals_similarity1, origin_subgoals_similarity2,\
-        steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
-        steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
-        subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2,\
-        ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2,\
-        relation_subgoals1, relation_subgoals2, origin_relation_subgoals1, origin_relation_subgoals2,\
-        per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1,\
-        per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2\
-        ], coq_scripts
+        #before
+        #return [inference_result_int1, word_similarity1, axioms1, subgoals_similarity1,\
+        #inference_result_int2, word_similarity2, axioms2, subgoals_similarity2,\
+        #origin_subgoals_similarity1, origin_subgoals_similarity2,\
+        #steps1, ex_ind1, and_ind1, eq_ind1, ex_intro1, conj1, fun1, fun_ind1,\
+        #steps2, ex_ind2, and_ind2, eq_ind2, ex_intro2, conj2, fun2, fun_ind2,\
+        #subj_subgoals1, acc_subgoals1, dat_subgoals1, subj_subgoals2, acc_subgoals2, dat_subgoals2,\
+        #ori_subj_subgoals1, ori_acc_subgoals1, ori_dat_subgoals1, ori_subj_subgoals2, ori_acc_subgoals2, ori_dat_subgoals2,\
+        #relation_subgoals1, relation_subgoals2, origin_relation_subgoals1, origin_relation_subgoals2,\
+        #per_delete_subgoals1, per_origin_delete_subgoals1, per_relation_subgoals1, per_origin_relation_subgoals1,\
+        #per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2\
+        #], coq_scripts
+        #for japanese STS
+        features = [inference_result_int1, word_similarity1, 1-per_origin_delete_subgoals1, 1-per_origin_relation_subgoals1, 1/steps1,\
+        inference_result_int2, word_similarity2, 1-per_origin_delete_subgoals2, 1-per_origin_relation_subgoals2, 1/steps2]
+        similarity_score = float(sum(features)/len(features))
+        return similarity_score, coq_scripts
 
     else:    
         inference_result, coq_script = \

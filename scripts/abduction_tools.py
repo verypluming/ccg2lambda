@@ -272,8 +272,10 @@ def make_axioms_from_premises_and_conclusion(premises, conclusions, coq_script, 
             #for Japanese
             matching_premises = get_premises_that_match_conclusion_args(premises, conclusion)
             for premise in matching_premises:
-                if re.search("\_.*\s\(?", premise): 
-                    premise_preds.append(re.search("(\_.*)\s\(?", premise).group(1))
+                if re.search("^H[0-9]*", premise):
+                    premise_preds.append(premise.split()[2])
+                #if re.search("\_.*\s\(?", premise): 
+                #    premise_preds.append(re.search("(\_.*)\s\(?", premise).group(1))
         else:
             #premise_preds = [premise.split()[2] for premise in matching_premises]
             premise_preds = []
@@ -370,9 +372,9 @@ def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script
         get_lexical_relations_from_preds(
             premise_preds, conclusion_pred, coq_script, pred_args)
     axioms.update(set(linguistic_axioms))
-    #if not axioms:
-    #    approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
-    #    axioms.update(approx_axioms)
+    if not axioms:
+        approx_axioms = get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args)
+        axioms.update(approx_axioms)
     axioms = filter_wrong_axioms(axioms, coq_script)
     return axioms
 
@@ -429,28 +431,28 @@ def try_sim_abductions(coq_scripts):
     while True:
         #phrasal abduction
         #entailment proof
-        inference_result_str, direct_proof_scripts, new_direct_axioms = \
-            try_phrase_abduction(direct_proof_script,
-                        previous_axioms=axioms, expected='yes')
-        current_axioms = axioms.union(new_direct_axioms)
-        if inference_result_str == 'unknown':
-            #contradiction proof
-            inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-                try_phrase_abduction(reverse_proof_script,
-                              previous_axioms=axioms, expected='no')
-            current_axioms = axioms.union(new_reverse_axioms)
-        all_scripts = direct_proof_scripts + reverse_proof_scripts
+        #inference_result_str, direct_proof_scripts, new_direct_axioms = \
+        #    try_phrase_abduction(direct_proof_script,
+        #                previous_axioms=axioms, expected='yes')
+        #current_axioms = axioms.union(new_direct_axioms)
+        #if inference_result_str == 'unknown':
+        #    #contradiction proof
+        #    inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
+        #        try_phrase_abduction(reverse_proof_script,
+        #                      previous_axioms=axioms, expected='no')
+        #    current_axioms = axioms.union(new_reverse_axioms)
+        #all_scripts = direct_proof_scripts + reverse_proof_scripts
 
-        if inference_result_str == "unknown":
-            #previous abduction
-            inference_result_str, direct_proof_scripts, new_direct_axioms = \
-            try_abduction(direct_proof_script, previous_axioms=axioms, expected='yes')
-            current_axioms = axioms.union(new_direct_axioms)
-            if not inference_result_str == 'yes':
-                inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-                try_abduction(reverse_proof_script, previous_axioms=current_axioms, expected='no')
-                current_axioms.update(new_reverse_axioms)
-            all_scripts = direct_proof_scripts + reverse_proof_scripts
+        #if inference_result_str == "unknown":
+        #previous abduction
+        inference_result_str, direct_proof_scripts, new_direct_axioms = \
+        try_abduction(direct_proof_script, previous_axioms=axioms, expected='yes')
+        current_axioms = axioms.union(new_direct_axioms)
+        if not inference_result_str == 'yes':
+            inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
+            try_abduction(reverse_proof_script, previous_axioms=current_axioms, expected='no')
+            current_axioms.update(new_reverse_axioms)
+        all_scripts = direct_proof_scripts + reverse_proof_scripts
         if len(axioms) == len(current_axioms) or inference_result_str != 'unknown':
             break
         axioms = current_axioms
