@@ -29,6 +29,7 @@ from nltk.corpus import wordnet as wn
 from collections import *
 import urllib.parse
 import unicodedata
+import sys
 
 def build_knowledge_axioms(doc):
     if not doc:
@@ -202,8 +203,12 @@ def prove_doc(doc, abduction=None, similarity=None):
         #per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2\
         #], coq_scripts
         #for japanese STS
-        features = [inference_result_int1, word_similarity1, 1-per_origin_delete_subgoals1, 1-per_origin_relation_subgoals1, 1/steps1,\
-        inference_result_int2, word_similarity2, 1-per_origin_delete_subgoals2, 1-per_origin_relation_subgoals2, 1/steps2]
+        features = [inference_result_int1, word_similarity1, 1-per_delete_subgoals1, 1-per_relation_subgoals1, 1/steps1,\
+        inference_result_int2, word_similarity2, 1-per_delete_subgoals2, 1-per_relation_subgoals2, 1/steps2]
+        print("RTE(A->B): {0}, wordsim(A->B): {1}, subgoals(A->B): {2}, {3}, steps(A->B): {4}"\
+        .format(inference_result_int1, word_similarity1, 1-per_delete_subgoals1, 1-per_relation_subgoals1, 1/steps1), file=sys.stderr)
+        print("RTE(B->A): {0}, wordsim(B->A): {1}, subgoals(B->A): {2}, {3}, steps(B->A): {4}"\
+        .format(inference_result_int2, word_similarity2, 1-per_delete_subgoals2, 1-per_relation_subgoals2, 1/steps2), file=sys.stderr)
         similarity_score = float(sum(features)/len(features))
         return similarity_score, coq_scripts
 
@@ -378,8 +383,8 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
 
     # extract final subgoals from coq_scripts and calculate subgoal
     new_coq_scripts = coq_scripts[-1].replace(
-        'nltac. Set Firstorder Depth 3. nltac',
-        'nltac. Set Firstorder Depth 3. repeat nltac_base.')
+        'nltac. Set Firstorder Depth 6. nltac',
+        'nltac. Set Firstorder Depth 6. repeat nltac_base.')
     process = Popen(\
         new_coq_scripts, \
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -518,13 +523,13 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     ## extract origin subgoals from coq_scripts and calculate subgoal similarity
     if len(coq_scripts) == 1 or len(coq_scripts) == 3 or len(coq_scripts) == 5:
         origin_coq_scripts = coq_scripts[0].replace(
-            'nltac. Set Firstorder Depth 3. nltac',
-            'nltac. Set Firstorder Depth 3. repeat nltac_base')
+            'nltac. Set Firstorder Depth 6. nltac',
+            'nltac. Set Firstorder Depth 6. repeat nltac_base')
     #negation
     if len(coq_scripts) == 2 or len(coq_scripts) == 4:
         origin_coq_scripts = coq_scripts[1].replace(
-            'nltac. Set Firstorder Depth 3. nltac',
-            'nltac. Set Firstorder Depth 3. repeat nltac_base')
+            'nltac. Set Firstorder Depth 6. nltac',
+            'nltac. Set Firstorder Depth 6. repeat nltac_base')
     process = Popen(\
         origin_coq_scripts, \
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

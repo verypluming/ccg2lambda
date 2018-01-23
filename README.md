@@ -52,7 +52,7 @@ judging entailment for ja_parsed/ja_sts_sample.txt.jigg.sem.xml 0.68690640391729
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample2.txt ja/semantic_templates_ja_event.yaml
 jigg parsing ja_plain/ja_sts_sample2.txt
 semantic parsing ja_parsed/ja_sts_sample2.txt.jigg.sem.xml
-judging entailment for ja_parsed/ja_sts_sample2.txt.jigg.sem.xml 0.48305262523263526
+judging entailment for ja_parsed/ja_sts_sample2.txt.jigg.sem.xml 0.3330526252326353
 ```
 
 
