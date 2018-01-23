@@ -20,6 +20,7 @@ import itertools
 from linguistic_tools import linguistic_relationship
 from linguistic_tools import get_wordnet_cascade
 from normalization import denormalize_token, normalize_token
+import re
 
 
 def get_tokens_from_xml_node(node):
@@ -53,21 +54,34 @@ def get_lexical_relations(doc):
     axioms = list(itertools.chain(*[antonym_axioms]))
     return list(set(axioms))
 
+def check_types(pred, type_lists):
+    for type_list in type_lists:
+        if pred in type_list[0]:
+            return type_list[1]
 
-def create_antonym_axioms(relations_to_pairs):
+def create_antonym_axioms(relations_to_pairs, coq_script_debug=None):
     """
     For every linguistic relationship, check if 'antonym' is present.
     If it is present, then create an entry named:
     Axiom ax_antonym_token1_token2 : forall x, _token1 x -> _token2 x -> False.
     """
+    coq_lists, param_lists, type_lists = [], [], []
+    if coq_script_debug:
+        coq_lists = coq_script_debug.split("\n")
+        param_lists = [re.sub("Parameter ", "", coq_list) for coq_list in coq_lists if re.search("Parameter", coq_list)]
+        type_lists = [param_list.split(":") for param_list in param_lists]
     relation = 'antonym'
     antonyms = relations_to_pairs[relation]
     axioms = []
     if not antonyms:
         return axioms
     for t1, t2 in antonyms:
+        if "Event -> Prop" in check_types(t2.lstrip("_"), type_lists):
         #axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x -> False.'\
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall F x y, _{1} x -> _{2} y -> F (Subj x) -> F (Subj y)  -> False.'\
+            axiom = 'Axiom ax_{0}_{1}_{2} : forall F x y, _{1} x -> _{2} y -> F (Subj x) -> F (Subj y)  -> False.'\
+                .format(relation, t1, t2)
+        else:
+            axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> {2} x -> False.'\
                 .format(relation, t1, t2)
         axioms.append(axiom)
     return axioms
@@ -95,6 +109,9 @@ def create_reventail_axioms(relations_to_pairs, relation='hyponym'):
     For every linguistic relationship, check if 'relation' is present.
     If it is present, then create an entry named:
     Axiom ax_relation_token1_token2 : forall x, _token2 x -> _token1 x.
+    **Although the axiom above is correct, there is no influence in the proof.
+    **So, temporarily modify the generated axiom below.
+    Axiom ax_relation_token1_token2 : forall x, _token1 x -> _token2 x.
     Note how the predicates are reversed.
     """
     rel_pairs = relations_to_pairs[relation]
@@ -102,13 +119,13 @@ def create_reventail_axioms(relations_to_pairs, relation='hyponym'):
     if not rel_pairs:
         return axioms
     for t1, t2 in rel_pairs:
-        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{2} x -> _{1} x.'\
+        axiom = 'Axiom ax_{0}_{1}_{2} : forall x, _{1} x -> _{2} x.'\
                 .format(relation, t1, t2)
         axioms.append(axiom)
     return axioms
 
 
-def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=None):
+def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=None, coq_script_debug=None):
     src_preds = [denormalize_token(p) for p in premise_preds]
     trg_pred = denormalize_token(conclusion_pred)
 
@@ -127,7 +144,7 @@ def get_lexical_relations_from_preds(premise_preds, conclusion_pred, pred_args=N
             relations_to_pairs[relation].append((src_pred, trg_pred))
 
     # TODO: add pred_args into the axiom creation.
-    antonym_axioms = create_antonym_axioms(relations_to_pairs)
+    antonym_axioms = create_antonym_axioms(relations_to_pairs, coq_script_debug)
     synonym_axioms = create_entail_axioms(relations_to_pairs, 'synonym')
     hypernym_axioms = create_entail_axioms(relations_to_pairs, 'hypernym')
     similar_axioms = create_entail_axioms(relations_to_pairs, 'similar')

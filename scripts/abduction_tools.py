@@ -237,13 +237,13 @@ def get_subgoals_from_coq_output(coq_output_lines, premises):
     return subgoals
 
 
-def make_axioms_from_premises_and_conclusion(premises, conclusion, coq_output_lines=None):
+def make_axioms_from_premises_and_conclusion(premises, conclusion, coq_output_lines=None, coq_script_debug=None):
     matching_premises = get_premises_that_match_conclusion_args(
         premises, conclusion)
     premise_preds = [premise.split()[2] for premise in matching_premises]
     conclusion_pred = conclusion.split()[0]
     pred_args = get_predicate_arguments(premises, conclusion)
-    axioms = make_axioms_from_preds(premise_preds, conclusion_pred, pred_args)
+    axioms = make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script_debug)
     # print('Has axioms: {0}'.format(axioms), file=sys.stderr)
     if not axioms:
         failure_log = make_failure_log(
@@ -324,11 +324,11 @@ def get_predicate_arguments(premises, conclusion):
     return pred_args
 
 
-def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args):
+def make_axioms_from_preds(premise_preds, conclusion_pred, pred_args, coq_script_debug=None):
     axioms = set()
     linguistic_axioms = \
         get_lexical_relations_from_preds(
-            premise_preds, conclusion_pred, pred_args)
+            premise_preds, conclusion_pred, pred_args, coq_script_debug)
     axioms.update(set(linguistic_axioms))
     # if not axioms:
     #   approx_axioms = GetApproxRelationsFromPreds(premise_preds, conclusion_pred)
@@ -415,7 +415,7 @@ def try_abduction(coq_script, previous_axioms=set(), expected='yes'):
     matching_premises = get_premises_that_match_conclusion_args(
         premise_lines, conclusion)
     axioms = make_axioms_from_premises_and_conclusion(
-        premise_lines, conclusion, output_lines)
+        premise_lines, conclusion, output_lines, coq_script_debug)
     axioms = filter_wrong_axioms(axioms, coq_script)
     axioms = axioms.union(previous_axioms)
     new_coq_script = insert_axioms_in_coq_script(axioms, coq_script)
