@@ -380,7 +380,7 @@ if __name__ == '__main__':
 
 #sick_trial_24
 #sick_trial_816
-#sick_trial_3941
+#sick_trial_3941 bug!!
 #sick_trial_2972
 #sick_test_9491
 #sick_trial_4
