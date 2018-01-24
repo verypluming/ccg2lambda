@@ -312,19 +312,24 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
         case_c_arg = re.sub(r'\?([0-9]+)', r'x\1', case_c_arg)
         case = re.search(r'([A-Z][a-z][a-z][a-z]?)', case_c_arg).group(1)
         pat = re.compile(case)
+        case_p_preds = []
+        case_p_preds_args_id = []
         for p_pred, p_args in p_pred_args.items():
             if re.search(pat, p_args[0]):
+                case_p_preds.append(p_pred)
+                case_p_preds_args_id.extend(p_pred_args_id[p_pred])
+        if len(case_p_preds) > 0:
+            axiom = 'Axiom ax_case_phrase{0}{1} : forall {2}, '.format(
+                "".join(case_p_preds),
+                case_c_pred,
+                ' '.join('x' + str(i) for i in list(set(case_p_preds_args_id+c_pred_args_id[case_c_pred]))),
+                )
+            for case_p_pred in case_p_preds:
                 #create axioms with premises which have the same case 
-                axiom = 'Axiom ax_case_phrase{0}{1} : forall {2}, {0} {3} -> {1} {4}.'.format(
-                        p_pred,
-                        case_c_pred,
-                        ' '.join('x' + str(i) for i in list(set(p_pred_args_id[p_pred]+c_pred_args_id[case_c_pred]))),
-                        ' '.join('x' + str(i) for i in p_pred_args_id[p_pred]),
-                        ' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])
-                        )
+                axiom += case_p_pred+" "+" ".join('x' + str(i) for i in p_pred_args_id[case_p_pred])+" -> "
                 #extract features of these candidates by type, ngram, WN(sim, relation), W2V, RTE_gold
                 c_ph_word = re.sub("_", "", case_c_pred)
-                p_ph_word = re.sub("_", "", p_pred)
+                p_ph_word = re.sub("_", "", case_p_pred)
                 typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
                 ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
                 wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
@@ -333,6 +338,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 wordnetrel, antonym = check_wordnetrel(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
                 feature = simlist + wordnetrel
+                features[antonym+case_p_pred+case_c_pred] = feature
+                used_premises.add(case_p_pred)
                 if antonym == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
                     #check if entailment axiom was generated
                     exist_axioms = [axiom for axiom in axioms if p in axiom]
@@ -341,8 +348,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             axioms.remove(exist_axiom)
                     #antonym axiom for event predicates
                     axiom = 'Axiom ax_case_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
-                        p_pred,
+                        case_p_pred,
                         case_c_pred)
+                    break
                 elif antonym == "antonym":
                     #check if entailment axiom was generated
                     exist_axioms = [axiom for axiom in axioms if p in axiom]
@@ -351,14 +359,14 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             axioms.remove(exist_axiom)
                     #antonym axiom for entity predicates
                     axiom = 'Axiom ax_case_antonym{0}{1} : forall x, {0} x -> {1} x -> False.'.format(
-                        p_pred,
+                        case_p_pred,
                         case_c_pred)
+                    break
+            if antonym == "phrase":
+                axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
+            covered_conclusions.add(case_c_pred)
+            axioms.append(axiom)
 
-                used_premises.add(p_pred)
-                covered_conclusions.add(case_c_pred)
-                axioms.append(axiom)
-                features[antonym+p_pred+case_c_pred] = feature
-                break
     #create axioms about sub-goals without case information
     exclude_preds_in_conclusion = {
         get_pred_from_coq_line(l, is_conclusion=True) \
