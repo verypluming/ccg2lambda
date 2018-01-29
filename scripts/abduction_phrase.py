@@ -23,6 +23,7 @@ import re
 from subprocess import Popen
 import subprocess
 import sys
+from py_thesaurus import Thesaurus
 
 from abduction_tools import *
 from knowledge import get_tokens_from_xml_node, get_lexical_relations_from_preds
@@ -308,6 +309,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
     #create axioms about sub-goals with existential variables containing case information
     case_c_preds = [c for c, c_args in c_pred_args.items() if contains_case(str(c_args)) and len(c_args[0]) == 1]
     for case_c_pred in case_c_preds:
+        new_instance = Thesaurus(re.sub("_", "", case_c_pred))
+        synonyms = new_instance.get_synonym()
+        synonym_flg = 0
         case_c_arg = c_pred_args[case_c_pred][0][0]
         case_c_arg = re.sub(r'\?([0-9]+)', r'x\1', case_c_arg)
         case = re.search(r'([A-Z][a-z][a-z][a-z]?)', case_c_arg).group(1)
@@ -315,9 +319,12 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
         case_p_preds = []
         case_p_preds_args_id = []
         for p_pred, p_args in p_pred_args.items():
+            if p_pred in synonyms:
+                synonym_flg = 1
             if re.search(pat, p_args[0]):
                 case_p_preds.append(p_pred)
                 case_p_preds_args_id.extend(p_pred_args_id[p_pred])
+        print(case_c_pred, synonyms, p_pred_args, synonym_flg)
         if len(case_p_preds) > 0:
             axiom = 'Axiom ax_case_phrase{0}{1} : forall {2}, '.format(
                 "".join(case_p_preds),
@@ -364,8 +371,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     break
             if antonym == "phrase":
                 axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
-            covered_conclusions.add(case_c_pred)
-            axioms.append(axiom)
+            if synonym_flg == 1:
+                covered_conclusions.add(case_c_pred)
+                axioms.append(axiom)
 
     #create axioms about sub-goals without case information
     exclude_preds_in_conclusion = {
@@ -389,6 +397,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     premise_preds_args_id.extend(p_pred_args_id[premise_pred])
                     #premise_pred = premise_preds[0] #not only the first premise, but all premises are selected
                 for p in c_preds:
+                    synonym_flg = 0
+                    new_instance = Thesaurus(re.sub("_", "", p))
+                    synonyms = new_instance.get_synonym()
                     if p not in covered_conclusions:
                         axiom = 'Axiom ax_phrase{0}{1} : forall {2}, '.format(
                             "".join(premise_preds),
@@ -397,6 +408,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             )
 
                         for premise_pred in premise_preds:
+                            if premise_pred in synonyms:
+                                synonym_flg = 1
                             if premise_pred in used_premises:
                                 continue
                             axiom += premise_pred+" "+" ".join('x' + str(i) for i in p_pred_args_id[premise_pred])+" -> "
@@ -437,9 +450,12 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                                 break
                         if antonym == "phrase":
                             axiom += p+" "+' '.join('x' + str(i) for i in c_pred_args_id[p])+"."
-                        covered_conclusions.add(p)
                         #print(axiom)
-                        axioms.append(axiom)
+                        print(case_c_pred, synonyms, p_pred_args, synonym_flg)
+                        if synonym_flg = 1:
+                            covered_conclusions.add(p)
+                            axioms.append(axiom)
+
                         
                     
 
