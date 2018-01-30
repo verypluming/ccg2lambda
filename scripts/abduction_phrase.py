@@ -46,6 +46,61 @@ class AxiomsPhrase(object):
     def attempt(self, coq_scripts, doc, target, context=None):
         return TryPhraseAbduction(coq_scripts, target)
 
+def get_premise_lines_ex(coq_output_lines):
+    premise_lines = []
+    line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(
+        coq_output_lines)
+    if not line_index_last_conclusion_sep:
+        return premise_lines
+    premise_flg = 0
+    for line in coq_output_lines[0:line_index_last_conclusion_sep - 1]:
+        if line == "============================":
+            premise_flg = 1
+        if premise_flg == 1:
+            premise = ""
+            if re.search("_[a-zA-Z]*\s[xze][0-9]*\s?[xze]?[0-9]?", line):
+                # _pred x0 x1, _pred x0
+                premise = re.search("(_[a-zA-Z]*\s[xze][0-9]*\s?[xze]?[0-9]?)", line).group(1)
+            if re.search("_[a-zA-Z]*\s\([a-zA-Z0-9]*\)", line):
+                # _pred (Subj x0)
+                premise = re.search("(_[a-zA-Z]*\s\([a-zA-Z0-9]*\))", line).group(1)
+        #    return premise_lines
+        #else:
+            if premise != "":
+                print("premise:{0}".format(premise))
+                premise_lines.append(premise)
+    return premise_lines
+
+def get_conclusion_lines_ex(coq_output_lines):
+    conclusion_lines = []
+    line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(coq_output_lines)
+    if not line_index_last_conclusion_sep:
+        return None
+    for line in coq_output_lines[line_index_last_conclusion_sep+1:]:
+        if re.search('Toplevel', line):
+            return conclusion_lines
+        elif line == '':
+            continue
+        elif re.search("No more subgoals", line):
+            conclusion_lines.append(line)
+        elif re.search("subgoal", line):
+            continue
+        elif re.search('repeat nltac_base', line):
+            return conclusion_lines
+        else:
+            conclusion = ""
+            if re.search("_[a-zA-Z]*\s[xze\?][0-9]*\s?[xze\?]?[0-9]?", line):
+                # _pred x0 x1, _pred x0
+                conclusion = re.search("(_[a-zA-Z]*\s[xze\?][0-9]*\s?[xze\?]?[0-9]?)", line).group(1)
+            if re.search("_[a-zA-Z]*\s\([a-zA-Z0-9\?]*\)", line):
+                # _pred (Subj x0)
+                conclusion = re.search("(_[a-zA-Z]*\s\([a-zA-Z0-9\?]*\))", line).group(1)
+            if conclusion != "":
+                print(conclusion)
+                conclusion_lines.append(conclusion)
+    return conclusion_lines
+
+
 def TryPhraseAbduction(coq_scripts, target):
     assert len(coq_scripts) == 2
     direct_proof_script = coq_scripts[0]
@@ -82,8 +137,8 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output_lines = [line.decode('utf-8').strip()
                     for line in process.stdout.readlines()]
-    premise_lines = get_premise_lines(output_lines)
-    conclusion = get_conclusion_lines(output_lines)
+    premise_lines = get_premise_lines_ex(output_lines)
+    conclusion = get_conclusion_lines_ex(output_lines)
     if is_theorem_almost_defined(output_lines):
         if expected == target and target != "unknown":
             #positive label
@@ -177,7 +232,7 @@ def check_case_from_list(total_arg_list):
 def is_theorem_almost_defined(output_lines):
     #check if all content subgoals are deleted(remaining relation subgoals can be permitted)
     #ignore relaional subgoals(False, Acc x0=x1) in the proof
-    conclusions = get_conclusion_lines(output_lines)
+    conclusions = get_conclusion_lines_ex(output_lines)
     #print("conclusion:{0}".format(conclusions), file=sys.stderr)
     subgoalflg = 0
     if len(conclusions) > 0:
@@ -319,7 +374,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
         case_p_preds = []
         case_p_preds_args_id = []
         for p_pred, p_args in p_pred_args.items():
-            if p_pred in synonyms:
+            if re.sub("_", "", p_pred) in synonyms:
                 synonym_flg = 1
             if re.search(pat, p_args[0]):
                 case_p_preds.append(p_pred)
@@ -390,26 +445,29 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
             if premise_preds:
                 phrase_pairs.append((premise_preds, c_preds)) # Saved phrase pairs for Yanaka-san.
                 premise_preds_args_id = []
+                synonym_flg = 0
+                synonyms = []
+                for p in c_preds:
+                    new_instance = Thesaurus(re.sub("_", "", p))
+                    synonyms.extend(new_instance.get_synonym())
                 for premise_pred in premise_preds:
+                    if re.sub("_", "", premise_pred) in synonyms:
+                        # There is synonym with sub-goals. This shows phrase-axioms can be created.
+                        synonym_flg = 1
                     #if the premise has been already used for axiom containing cases(ex. lady(Subj x) -> woman(Subj x), it will be unnecessary)
                     if premise_pred in used_premises:
                         continue
                     premise_preds_args_id.extend(p_pred_args_id[premise_pred])
                     #premise_pred = premise_preds[0] #not only the first premise, but all premises are selected
+                
                 for p in c_preds:
-                    synonym_flg = 0
-                    new_instance = Thesaurus(re.sub("_", "", p))
-                    synonyms = new_instance.get_synonym()
                     if p not in covered_conclusions:
                         axiom = 'Axiom ax_phrase{0}{1} : forall {2}, '.format(
                             "".join(premise_preds),
                             p,
                             ' '.join('x' + str(i) for i in list(set(premise_preds_args_id+c_pred_args_id[p])))
                             )
-
                         for premise_pred in premise_preds:
-                            if premise_pred in synonyms:
-                                synonym_flg = 1
                             if premise_pred in used_premises:
                                 continue
                             axiom += premise_pred+" "+" ".join('x' + str(i) for i in p_pred_args_id[premise_pred])+" -> "
@@ -451,8 +509,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         if antonym == "phrase":
                             axiom += p+" "+' '.join('x' + str(i) for i in c_pred_args_id[p])+"."
                         #print(axiom)
-                        print(case_c_pred, synonyms, p_pred_args, synonym_flg)
-                        if synonym_flg = 1:
+                        print(p, synonyms, p_pred_args, synonym_flg)
+                        if synonym_flg == 1:
                             covered_conclusions.add(p)
                             axioms.append(axiom)
 

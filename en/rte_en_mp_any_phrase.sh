@@ -81,16 +81,16 @@ cat $sentences_fname | \
 target_answer=`cat ${plain_dir}/${sentences_basename/.txt/}.answer`
 # if premise sentence contains "no", substitute "a" for "no"
 # In this case, the target answer changes from "contradiction" to "entailment"
-num=`grep -n " no " ${plain_dir}/${sentences_basename}.tok| sed -e 's/:.*//g'`
-if [ "$num" == 1 ]; then
-  echo "Info: no contains in premise sentence $sentences_basename"
-  sed -i '' -e "1 s/ no / a /g" ${plain_dir}/${sentences_basename}.tok
-  if [ "$target_answer" == "yes" ]; then
-    target_answer="no"
-  elif [ "$target_answer" = "no" ]; then
-    target_answer="yes"
-  fi
-fi
+#num=`grep -n " no " ${plain_dir}/${sentences_basename}.tok| sed -e 's/:.*//g'`
+#if [ "$num" == 1 ]; then
+#  echo "Info: no contains in premise sentence $sentences_basename"
+#  sed -i '' -e "1 s/ no / a /g" ${plain_dir}/${sentences_basename}.tok
+#  if [ "$target_answer" == "yes" ]; then
+#    target_answer="no"
+#  elif [ "$target_answer" = "no" ]; then
+#    target_answer="yes"
+#  fi
+#fi
 
 # Set parser locations
 if [ ! -f "en/parser_location.txt" ]; then
