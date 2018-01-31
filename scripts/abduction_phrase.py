@@ -35,6 +35,7 @@ from semantic_tools import is_theorem_defined
 from tactics import get_tactics
 from tree_tools import is_string
 from linguistic_tools import linguistic_relationship, get_wordnet_cascade
+from itertools import chain
 
 class AxiomsPhrase(object):
     """
@@ -52,20 +53,20 @@ def get_premise_lines_ex(coq_output_lines):
         coq_output_lines)
     if not line_index_last_conclusion_sep:
         return premise_lines
-    premise_flg = 0
-    for line in coq_output_lines[0:line_index_last_conclusion_sep - 1]:
-        if line == "============================":
-            premise_flg = 1
-        if premise_flg == 1:
+    for line in coq_output_lines[line_index_last_conclusion_sep - 1:0:-1]:
+        if line == "":
+            return premise_lines
+        else:
             premise = ""
-            if re.search("_[a-zA-Z]*\s[xze][0-9]*\s?[xze]?[0-9]?", line):
+            if re.search("=", line) and not re.search("\(", line):
+                # Subj x1 = x2, Acc ?3353 = x1
+                premise= line
+            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?", line):
                 # _pred x0 x1, _pred x0
-                premise = re.search("(_[a-zA-Z]*\s[xze][0-9]*\s?[xze]?[0-9]?)", line).group(1)
-            if re.search("_[a-zA-Z]*\s\([a-zA-Z0-9]*\)", line):
+                premise = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?)", line).group(1)
+            if re.search("_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
                 # _pred (Subj x0)
-                premise = re.search("(_[a-zA-Z]*\s\([a-zA-Z0-9]*\))", line).group(1)
-        #    return premise_lines
-        #else:
+                premise = re.search("(_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if premise != "":
                 print("premise:{0}".format(premise))
                 premise_lines.append(premise)
@@ -89,14 +90,20 @@ def get_conclusion_lines_ex(coq_output_lines):
             return conclusion_lines
         else:
             conclusion = ""
-            if re.search("_[a-zA-Z]*\s[xze\?][0-9]*\s?[xze\?]?[0-9]?", line):
+            if re.search("=", line) and not re.search("\(", line):
+                # Subj x1 = x2, Acc ?3353 = x1
+                conclusion = line
+            if re.search("False", line):
+                # False
+                conclusion = line
+            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?", line):
                 # _pred x0 x1, _pred x0
-                conclusion = re.search("(_[a-zA-Z]*\s[xze\?][0-9]*\s?[xze\?]?[0-9]?)", line).group(1)
-            if re.search("_[a-zA-Z]*\s\([a-zA-Z0-9\?]*\)", line):
+                conclusion = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?)", line).group(1)
+            if re.search("_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
                 # _pred (Subj x0)
-                conclusion = re.search("(_[a-zA-Z]*\s\([a-zA-Z0-9\?]*\))", line).group(1)
+                conclusion = re.search("(_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if conclusion != "":
-                print(conclusion)
+                print("conclusion:{0}".format(conclusion))
                 conclusion_lines.append(conclusion)
     return conclusion_lines
 
@@ -257,8 +264,8 @@ def get_tree_pred_args_ex(line, is_conclusion=False):
     returns the list  of variables (tree leaves).
     """
     tree_args = None
-    if not is_conclusion:
-        line = ' '.join(line.split()[2:])
+    #if not is_conclusion:
+    #    line = ' '.join(line.split()[2:])
     # Transform a line 'Subj ?2914 = Acc x1' into '= (Subj ?2914) (Acc x1)'
     line = re.sub(r'(.+) (.+) = (.+) (.+)', r'= (\1 \2) (\3 \4)', line)
     # Transform a line '?2914 = Acc x1' into '= ?2914 (Acc x1)'
@@ -298,10 +305,11 @@ def get_pred_from_coq_line(line, is_conclusion=False):
     if is_conclusion:
         return line.split()[0]
     else:
-        if len(line.split()) > 2:
-            return line.split()[2]
-        else:
-            return line.split()[0]
+        return line.split()[0]
+        #if len(line.split()) > 2:
+        #    return line.split()[2]
+        #else:
+        #    return line.split()[0]
     raise(ValueError("Strange coq line: {0}".format(line)))
 
 def check_decomposed(line):
@@ -361,14 +369,20 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
             if any(a in ta for a in args for ta in targs):
                 c_args_preds[targs].update(preds)
 
-    #create axioms about sub-goals with existential variables containing case information
+    #create axioms about sub-goals containing case information
     case_c_preds = [c for c, c_args in c_pred_args.items() if contains_case(str(c_args)) and len(c_args[0]) == 1]
     for case_c_pred in case_c_preds:
         new_instance = Thesaurus(re.sub("_", "", case_c_pred))
         synonyms = new_instance.get_synonym()
         synonym_flg = 0
         case_c_arg = c_pred_args[case_c_pred][0][0]
-        case_c_arg = re.sub(r'\?([0-9]+)', r'x\1', case_c_arg)
+        gen_c_arg = re.sub(r'\([A-Z][a-z][a-z][a-z]?\s([xz][0-9])*\)',r'\1', case_c_arg) #extract x1 from Subj x1
+        ex_p_pred = [prem for prem, p_args in p_pred_args.items() if set(p_args).issubset([gen_c_arg])] #x1 event
+        all_p_pred = [prem for prem, p_args in p_pred_args.items() if set(p_args).issuperset([gen_c_arg])] #x1 all predicates 
+        key_p_pred = set(all_p_pred).difference(set(ex_p_pred)) #all predicates - event
+        check_args = list(chain.from_iterable([p_pred_args[k] for k in key_p_pred])) #variables of key_p_pred
+        check_args.remove(gen_c_arg) #variables of key_p_pred - gen_c_arg
+
         case = re.search(r'([A-Z][a-z][a-z][a-z]?)', case_c_arg).group(1)
         pat = re.compile(case)
         case_p_preds = []
@@ -376,10 +390,22 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
         for p_pred, p_args in p_pred_args.items():
             if re.sub("_", "", p_pred) in synonyms:
                 synonym_flg = 1
-            if re.search(pat, p_args[0]):
+            if re.search(pat, p_args[0]) and case_c_arg in p_args:
+                #if variable is not existential, predicates whose variables are the same as sub-goals are premise candidates
                 case_p_preds.append(p_pred)
                 case_p_preds_args_id.extend(p_pred_args_id[p_pred])
-        print(case_c_pred, synonyms, p_pred_args, synonym_flg)
+                continue
+            elif re.search(pat, p_args[0]) and re.search("\?", case_c_arg):
+                #if variable is existential, any predicates whose variables have the same semantic role are premise candidates
+                case_p_preds.append(p_pred)
+                case_p_preds_args_id.extend(p_pred_args_id[p_pred])
+                continue
+            if set(p_args).issuperset(check_args):
+                #NP-phrase
+                case_p_preds.append(p_pred)
+                case_p_preds_args_id.extend(p_pred_args_id[p_pred])
+                continue
+        print(case_c_pred, case_p_preds, p_pred_args, synonym_flg)
         if len(case_p_preds) > 0:
             axiom = 'Axiom ax_case_phrase{0}{1} : forall {2}, '.format(
                 "".join(case_p_preds),
@@ -426,9 +452,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     break
             if antonym == "phrase":
                 axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
-            if synonym_flg == 1:
-                covered_conclusions.add(case_c_pred)
-                axioms.append(axiom)
+            #if synonym_flg == 1:
+            covered_conclusions.add(case_c_pred)
+            axioms.append(axiom)
 
     #create axioms about sub-goals without case information
     exclude_preds_in_conclusion = {
