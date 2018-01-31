@@ -61,14 +61,17 @@ def get_premise_lines_ex(coq_output_lines):
             if re.search("=", line) and not re.search("\(", line):
                 # Subj x1 = x2, Acc ?3353 = x1
                 premise= line
-            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?", line):
-                # _pred x0 x1, _pred x0
-                premise = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?)", line).group(1)
+            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*$", line):
+                # _pred x0
+                premise = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*)$", line).group(1)
+            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
+                # _pred x0 x1
+                premise = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
             if re.search("_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
                 # _pred (Subj x0)
                 premise = re.search("(_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if premise != "":
-                print("premise:{0}".format(premise))
+                print("premise:{0}".format(premise), file=sys.stderr)
                 premise_lines.append(premise)
     return premise_lines
 
@@ -77,6 +80,7 @@ def get_conclusion_lines_ex(coq_output_lines):
     line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(coq_output_lines)
     if not line_index_last_conclusion_sep:
         return None
+    #print(coq_output_lines[line_index_last_conclusion_sep+1:])
     for line in coq_output_lines[line_index_last_conclusion_sep+1:]:
         if re.search('Toplevel', line):
             return conclusion_lines
@@ -95,15 +99,18 @@ def get_conclusion_lines_ex(coq_output_lines):
                 conclusion = line
             if re.search("False", line):
                 # False
-                conclusion = line
-            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?", line):
-                # _pred x0 x1, _pred x0
-                conclusion = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s?[xz\?]?[0-9]?)", line).group(1)
+                conclusion = "False"
+            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*$", line):
+                # _pred x0
+                conclusion = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*)$", line).group(1)
+            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
+                # _pred x0 x1
+                conclusion = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
             if re.search("_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
                 # _pred (Subj x0)
                 conclusion = re.search("(_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if conclusion != "":
-                print("conclusion:{0}".format(conclusion))
+                print("conclusion:{0}".format(conclusion), file=sys.stderr)
                 conclusion_lines.append(conclusion)
     return conclusion_lines
 
@@ -239,9 +246,12 @@ def check_case_from_list(total_arg_list):
 def is_theorem_almost_defined(output_lines):
     #check if all content subgoals are deleted(remaining relation subgoals can be permitted)
     #ignore relaional subgoals(False, Acc x0=x1) in the proof
+    conclusions = []
     conclusions = get_conclusion_lines_ex(output_lines)
     #print("conclusion:{0}".format(conclusions), file=sys.stderr)
     subgoalflg = 0
+    if conclusions is None:
+        return False
     if len(conclusions) > 0:
         for conclusion in conclusions:
             #if not "False" in conclusion:
@@ -381,7 +391,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
         all_p_pred = [prem for prem, p_args in p_pred_args.items() if set(p_args).issuperset([gen_c_arg])] #x1 all predicates 
         key_p_pred = set(all_p_pred).difference(set(ex_p_pred)) #all predicates - event
         check_args = list(chain.from_iterable([p_pred_args[k] for k in key_p_pred])) #variables of key_p_pred
-        check_args.remove(gen_c_arg) #variables of key_p_pred - gen_c_arg
+        if gen_c_arg in check_args:
+            check_args.remove(gen_c_arg) #variables of key_p_pred - gen_c_arg
 
         case = re.search(r'([A-Z][a-z][a-z][a-z]?)', case_c_arg).group(1)
         pat = re.compile(case)
@@ -405,7 +416,6 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 case_p_preds.append(p_pred)
                 case_p_preds_args_id.extend(p_pred_args_id[p_pred])
                 continue
-        print(case_c_pred, case_p_preds, p_pred_args, synonym_flg)
         if len(case_p_preds) > 0:
             axiom = 'Axiom ax_case_phrase{0}{1} : forall {2}, '.format(
                 "".join(case_p_preds),
@@ -535,10 +545,10 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         if antonym == "phrase":
                             axiom += p+" "+' '.join('x' + str(i) for i in c_pred_args_id[p])+"."
                         #print(axiom)
-                        print(p, synonyms, p_pred_args, synonym_flg)
-                        if synonym_flg == 1:
-                            covered_conclusions.add(p)
-                            axioms.append(axiom)
+                        #print(p, synonyms, p_pred_args, synonym_flg)
+                        #if synonym_flg == 1:
+                        covered_conclusions.add(p)
+                        axioms.append(axiom)
 
                         
                     
