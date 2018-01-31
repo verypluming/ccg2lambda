@@ -61,15 +61,15 @@ def get_premise_lines_ex(coq_output_lines):
             if re.search("=", line) and not re.search("\(", line):
                 # Subj x1 = x2, Acc ?3353 = x1
                 premise= line
-            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*$", line):
+            if re.search("\s_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*$", line):
                 # _pred x0
-                premise = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*)$", line).group(1)
-            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
+                premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*)$", line).group(1)
+            if re.search("\s_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
                 # _pred x0 x1
-                premise = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
-            if re.search("_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
+                premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
+            if re.search("\s_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
                 # _pred (Subj x0)
-                premise = re.search("(_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
+                premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if premise != "":
                 print("premise:{0}".format(premise), file=sys.stderr)
                 premise_lines.append(premise)
@@ -100,15 +100,15 @@ def get_conclusion_lines_ex(coq_output_lines):
             if re.search("False", line):
                 # False
                 conclusion = "False"
-            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*$", line):
-                # _pred x0
-                conclusion = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*)$", line).group(1)
-            if re.search("_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
+            if re.search("_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*$", line):
+                # _pred(_1) x0
+                conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*)$", line).group(1)
+            if re.search("_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
                 # _pred x0 x1
-                conclusion = re.search("(_[a-zA-Z]*\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
-            if re.search("_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
+                conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
+            if re.search("_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
                 # _pred (Subj x0)
-                conclusion = re.search("(_[a-zA-Z]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
+                conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if conclusion != "":
                 print("conclusion:{0}".format(conclusion), file=sys.stderr)
                 conclusion_lines.append(conclusion)
