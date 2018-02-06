@@ -159,9 +159,14 @@ def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, t
         pred_args = defaultdict(lambda: ['x'])
     src_preds = [denormalize_token(p) for p in premise_preds]
     trg_pred = denormalize_token(conclusion_pred)
+    stopwords = ["True", "False"]
+    if trg_pred in stopwords:
+        return []
     approx_simil = []
     tmp_src_pred, trg_trg_pred = "", ""
     for src_pred in src_preds:
+        if src_pred in stopwords:
+            continue
         if src_pred == trg_pred:
             continue
         if unicodedata.category(src_pred[0]) == "Lo":
@@ -179,7 +184,7 @@ def get_approx_relations_from_preds(premise_preds, conclusion_pred, pred_args, t
         similarity, err = process.communicate()
         try:
             approx_simil.append((float(similarity.decode()), src_pred))
-        except ValueError:
+        except:
             continue
 
     if len(approx_simil)==0:

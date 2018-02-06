@@ -371,8 +371,11 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 process = Popen(\
                 'curl http://localhost:5000/word2vec/similarity?w1='+ pr +'\&w2='+ word, \
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                pre_similarity = process.communicate()[0]
-                pre_similarities.append(float(pre_similarity.decode()))
+                pre_similarity, err = process.communicate()
+                try:
+                    pre_similarities.append(float(pre_similarity.decode()))
+                except:
+                    continue
             elif dic == "wn":
                 pre_similarity = wordnet_similarity(pr, word)
                 pre_similarities.append(pre_similarity)

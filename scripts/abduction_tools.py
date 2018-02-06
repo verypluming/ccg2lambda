@@ -434,13 +434,13 @@ def try_sim_abductions(coq_scripts):
         #entailment proof
         inference_result_str, direct_proof_scripts, new_direct_axioms, features = \
             try_phrase_abduction(direct_proof_script,
-                        previous_axioms=axioms, expected='yes')
+                        previous_axioms=axioms, features={}, expected='yes')
         current_axioms = axioms.union(new_direct_axioms)
         if inference_result_str == 'unknown':
             #contradiction proof
-            inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
+            inference_result_str, reverse_proof_scripts, new_reverse_axioms, features = \
                 try_phrase_abduction(reverse_proof_script,
-                              previous_axioms=axioms, expected='no')
+                              previous_axioms=axioms, features={}, expected='no')
             current_axioms = axioms.union(new_reverse_axioms)
         all_scripts = direct_proof_scripts + reverse_proof_scripts
 

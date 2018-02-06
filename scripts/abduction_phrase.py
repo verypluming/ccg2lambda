@@ -160,14 +160,12 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     output_lines = [line.decode('utf-8').strip()
                     for line in process.stdout.readlines()]
     tmp_conclusion = get_conclusion_lines(output_lines)
-    print(tmp_conclusion)
     if unicodedata.category(tmp_conclusion[0][1]) == "Lo":
         premise_lines = get_premise_lines(output_lines)
-        conclusion = get_conclusion_lines(output_lines)
+        conclusion = tmp_conclusion
     else:
         premise_lines = get_premise_lines_ex(output_lines)
         conclusion = get_conclusion_lines_ex(output_lines)
-    print(premise_lines, conclusion)
     if is_theorem_almost_defined(output_lines):
         #if expected == target and target != "unknown":
         #    #positive label
@@ -262,7 +260,11 @@ def is_theorem_almost_defined(output_lines):
     #check if all content subgoals are deleted(remaining relation subgoals can be permitted)
     #ignore relaional subgoals(False, Acc x0=x1) in the proof
     conclusions = []
-    conclusions = get_conclusion_lines_ex(output_lines)
+    tmp_conclusion = get_conclusion_lines(output_lines)
+    if unicodedata.category(tmp_conclusion[0][1]) == "Lo":
+        conclusions = tmp_conclusion
+    else:
+        conclusions = get_conclusion_lines_ex(output_lines)
     #print("conclusion:{0}".format(conclusions), file=sys.stderr)
     subgoalflg = 0
     if conclusions is None:
