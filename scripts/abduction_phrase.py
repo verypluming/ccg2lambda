@@ -36,6 +36,7 @@ from tactics import get_tactics
 from tree_tools import is_string
 from linguistic_tools import linguistic_relationship, get_wordnet_cascade
 from itertools import chain
+import urllib.parse
 import unicodedata
 
 class AxiomsPhrase(object):
@@ -332,11 +333,10 @@ def get_pred_from_coq_line(line, is_conclusion=False):
     if is_conclusion:
         return line.split()[0]
     else:
-        return line.split()[0]
-        #if len(line.split()) > 2:
-        #    return line.split()[2]
-        #else:
-        #    return line.split()[0]
+        if re.search("^H[0-9]*\s:", line):
+            return line.split(" ")[2]
+        else:
+            return line.split()[0]
     raise(ValueError("Strange coq line: {0}".format(line)))
 
 def check_decomposed(line):
@@ -359,15 +359,16 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
     used_premises = set()
     axioms = []
     phrase_pairs = []
-    premises = [p for p in premises if get_pred_from_coq_line(p).startswith('_') and check_decomposed(p)]
+    premises = [p for p in premises if get_pred_from_coq_line(p, is_conclusion=False).startswith('_') and check_decomposed(p)]
     args_id = defaultdict(lambda: len(args_id))
     p_pred_args_id = {}
     c_pred_args_id = {}
-
     p_pred_args = {}
     #p_pred_args = defaultdict(list)
     for p in premises:
         predicate = get_pred_from_coq_line(p, is_conclusion=False)
+        if re.search("^H[0-9]*\s:", p):
+            p = re.search("^H[0-9]*\s:(.*?)$", p).group(1)
         args = get_tree_pred_args_ex(p, is_conclusion=False)
         if args is not None:
             p_pred_args[predicate] = args
@@ -474,6 +475,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
                 if not relation:
                     relation = check_stem(c_ph_word, p_ph_word)
+                if not relation:
+                    relation = check_word2vec(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
                 features[case_p_pred+case_c_pred] = simlist
                 used_premises.add(case_p_pred)
@@ -544,6 +547,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                             wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
                         if not relation:
                             relation = check_stem(c_ph_word, p_ph_word)
+                        if not relation:
+                            relation = check_word2vec(c_ph_word, p_ph_word)
                 if relation:
                     phrase_pairs.append((premise_preds, c_preds, relation)) # Saved phrase pairs
 
@@ -638,7 +643,6 @@ def make_phrases_from_premises_and_conclusions_ex_before(premises, conclusions, 
     axioms = []
     phrase_pairs = []
     premises = [p for p in premises if get_pred_from_coq_line(p).startswith('_') and check_decomposed(p)]
-
     p_pred_args = {}
     for p in premises:
         predicate = get_pred_from_coq_line(p, is_conclusion=False)
@@ -824,6 +828,10 @@ def calc_typesim(c_type, p_type):
         return 0.0
 
 def calc_word2vecsim(sub_pred, prem_pred):
+    if unicodedata.category(sub_pred[0]) == "Lo":
+        #if Japanese, do URL encode
+        sub_pred = urllib.parse.quote(sub_pred)
+        prem_pred = urllib.parse.quote(prem_pred)
     process = Popen(\
     'curl http://localhost:5000/word2vec/similarity?w1='+ sub_pred +'\&w2='+ prem_pred, \
     shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -883,6 +891,22 @@ def calc_argumentsim(sub_pred, prem_pred, pred_args):
         return 0.5
     else:
         return 0.0
+
+def check_word2vec(sub_pred, prem_pred):
+    threshold = 0.1 #tentatively. to do: optimize threshold
+    if unicodedata.category(sub_pred[0]) == "Lo":
+        #if Japanese, do URL encode
+        sub_pred = urllib.parse.quote(sub_pred)
+        prem_pred = urllib.parse.quote(prem_pred)
+    process = Popen(\
+    'curl http://localhost:5000/word2vec/similarity?w1='+ sub_pred +'\&w2='+ prem_pred, \
+    shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    similarity, err = process.communicate()
+    try:
+        if float(similarity.decode()) > threshold:
+            return "approx"
+    except ValueError:
+        return ""
 
 
 #unused functions

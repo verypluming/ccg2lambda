@@ -39,7 +39,8 @@ curl http://localhost:5000/word2vec/similarity?w1=person\&w2=woman
 
 ```bash
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample.txt ja/semantic_templates_ja_event.yaml
-./ja/similarity_ja_mp.sh ja/ja_sts_sample_2.txt ja/semantic_templates_ja_event.yaml
+./ja/similarity_ja_mp.sh ja/ja_sts_sample2.txt ja/semantic_templates_ja_event.yaml
+./ja/similarity_ja_mp.sh ja/ja_sts_sample3.txt ja/semantic_templates_ja_event.yaml
 ```
 
 ## Output
@@ -48,11 +49,15 @@ System output is shown below:
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample.txt ja/semantic_templates_ja_event.yaml
 jigg parsing ja_plain/ja_sts_sample.txt
 semantic parsing ja_parsed/ja_sts_sample.txt.jigg.sem.xml
-judging entailment for ja_parsed/ja_sts_sample.txt.jigg.sem.xml 0.653030303030303
+judging entailment for ja_parsed/ja_sts_sample.txt.jigg.sem.xml 0.6699149126520907
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample2.txt ja/semantic_templates_ja_event.yaml
 jigg parsing ja_plain/ja_sts_sample2.txt
 semantic parsing ja_parsed/ja_sts_sample2.txt.jigg.sem.xml
-judging entailment for ja_parsed/ja_sts_sample2.txt.jigg.sem.xml 0.19848484848484846
+judging entailment for ja_parsed/ja_sts_sample2.txt.jigg.sem.xml 0.28936469698793754
+./ja/similarity_ja_mp.sh ja/ja_sts_sample3.txt ja/semantic_templates_ja_event.yaml
+jigg parsing ja_plain/ja_sts_sample3.txt
+semantic parsing ja_parsed/ja_sts_sample3.txt.jigg.sem.xml
+judging entailment for ja_parsed/ja_sts_sample3.txt.jigg.sem.xml 0.38080667891380315
 ```
 
 

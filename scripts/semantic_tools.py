@@ -341,7 +341,17 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     coq_lines = coq_scripts[-1].split("\n")
     for coq_line in coq_lines:
         if re.search("Hint", coq_line):
-            if re.search("approx", coq_line) or re.search("ax_phrase", coq_line):
+            if re.search("phrase", coq_line):
+                #phrase
+                word_lines = coq_line.split("_")
+                word1s = word_lines[len(word_lines)-2:2:-1]
+                if re.search("(.*)\.", word_lines[-1]):
+                    word2 = word_lines[-1].rstrip(".")
+                else:
+                    word2 = word_lines[-1]
+                for word1 in word1s:
+                    merge_axioms[word1].append("w2v "+word2)
+            elif re.search("approx", coq_line):
                 #word2vec
                 word_lines = coq_line.split("_")
                 word1 = word_lines[2]
@@ -385,11 +395,14 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 try:
                     pre_similarities.append(float(pre_similarity.decode()))
                 except:
+                    pre_similarities.append(0)
                     continue
             elif dic == "wn":
                 pre_similarity = wordnet_similarity(pr, word)
                 pre_similarities.append(pre_similarity)
-        word_similarity += max(pre_similarities)
+        #word_similarity += max(pre_similarities)
+        #In considering phrase, calculate average.(to do: consider which is better, maximum or average)
+        word_similarity += float(sum(pre_similarities)/len(pre_similarities))
         axioms += 1
     if axioms > 0:
         word_similarity = word_similarity/axioms
