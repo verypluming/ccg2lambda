@@ -48,11 +48,11 @@ System output is shown below:
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample.txt ja/semantic_templates_ja_event.yaml
 jigg parsing ja_plain/ja_sts_sample.txt
 semantic parsing ja_parsed/ja_sts_sample.txt.jigg.sem.xml
-judging entailment for ja_parsed/ja_sts_sample.txt.jigg.sem.xml 0.6869064039172997
+judging entailment for ja_parsed/ja_sts_sample.txt.jigg.sem.xml 0.653030303030303
 ./ja/similarity_ja_mp.sh ja/ja_sts_sample2.txt ja/semantic_templates_ja_event.yaml
 jigg parsing ja_plain/ja_sts_sample2.txt
 semantic parsing ja_parsed/ja_sts_sample2.txt.jigg.sem.xml
-judging entailment for ja_parsed/ja_sts_sample2.txt.jigg.sem.xml 0.3330526252326353
+judging entailment for ja_parsed/ja_sts_sample2.txt.jigg.sem.xml 0.19848484848484846
 ```
 
 

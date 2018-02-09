@@ -203,12 +203,14 @@ def prove_doc(doc, abduction=None, similarity=None):
         #per_delete_subgoals2, per_origin_delete_subgoals2, per_relation_subgoals2, per_origin_relation_subgoals2\
         #], coq_scripts
         #for japanese STS
-        features = [inference_result_int1, word_similarity1, 1-per_delete_subgoals1, 1-per_relation_subgoals1, 1/steps1,\
-        inference_result_int2, word_similarity2, 1-per_delete_subgoals2, 1-per_relation_subgoals2, 1/steps2]
+        pred_overlap, pred1, pred2 = calc_pred_overlap(doc)
+        features = [inference_result_int1, word_similarity1, 1-subgoals_similarity1/len(pred2), 1-relation_subgoals1/len(pred2), 1/steps1,\
+        inference_result_int2, word_similarity2, 1-subgoals_similarity2/len(pred1), 1-relation_subgoals2/len(pred1), 1/steps2, pred_overlap]
+
         print("RTE(A->B): {0}, wordsim(A->B): {1}, subgoals(A->B): {2}, {3}, steps(A->B): {4}"\
-        .format(inference_result_int1, word_similarity1, 1-per_delete_subgoals1, 1-per_relation_subgoals1, 1/steps1), file=sys.stderr)
-        print("RTE(B->A): {0}, wordsim(B->A): {1}, subgoals(B->A): {2}, {3}, steps(B->A): {4}"\
-        .format(inference_result_int2, word_similarity2, 1-per_delete_subgoals2, 1-per_relation_subgoals2, 1/steps2), file=sys.stderr)
+        .format(inference_result_int1, word_similarity1, 1-subgoals_similarity1/len(pred2), 1-relation_subgoals1/len(pred2), 1/steps1), file=sys.stderr)
+        print("RTE(B->A): {0}, wordsim(B->A): {1}, subgoals(B->A): {2}, {3}, steps(B->A): {4}, pred_overlap: {5}"\
+        .format(inference_result_int2, word_similarity2, 1-subgoals_similarity2/len(pred1), 1-relation_subgoals2/len(pred1), 1/steps2, pred_overlap), file=sys.stderr)
         similarity_score = float(sum(features)/len(features))
         return similarity_score, coq_scripts
 
@@ -232,6 +234,14 @@ def prove_doc(doc, abduction=None, similarity=None):
                 abduction.attempt(coq_scripts, doc)
             coq_scripts.extend(abduction_scripts)
         return inference_result_str, coq_scripts
+
+def calc_pred_overlap(doc):
+    pred1 = set(doc.xpath("//span[contains(@id, 's0')]/@type"))
+    pred2 = set(doc.xpath("//span[contains(@id, 's1')]/@type"))
+    if pred1 and pred2:
+        return float(len(pred1&pred2)/len(pred1|pred2)), pred1, pred2
+    else:
+        return 0, 1, 1
 
 # Check whether the string "is defined" appears in the output of coq.
 # In that case, we return True. Otherwise, we return False.

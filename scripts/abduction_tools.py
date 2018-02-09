@@ -430,34 +430,33 @@ def try_sim_abductions(coq_scripts):
     axioms = set()
     all_scripts, direct_proof_scripts, reverse_proof_scripts = [], [], []
     while True:
-        #phrasal abduction
+        #previous abduction
         #entailment proof
-        inference_result_str, direct_proof_scripts, new_direct_axioms, features = \
-            try_phrase_abduction(direct_proof_script,
-                        previous_axioms=axioms, features={}, expected='yes')
+        inference_result_str, direct_proof_scripts, new_direct_axioms = \
+            try_abduction(direct_proof_script, previous_axioms=axioms, expected='yes')
         current_axioms = axioms.union(new_direct_axioms)
-        if inference_result_str == 'unknown':
+        if inference_result_str == "unknown":
             #contradiction proof
-            inference_result_str, reverse_proof_scripts, new_reverse_axioms, features = \
-                try_phrase_abduction(reverse_proof_script,
-                              previous_axioms=axioms, features={}, expected='no')
-            current_axioms = axioms.union(new_reverse_axioms)
+            inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
+                try_abduction(reverse_proof_script, previous_axioms=current_axioms, expected='no')
+            current_axioms.update(new_reverse_axioms)
         all_scripts = direct_proof_scripts + reverse_proof_scripts
-
-        if inference_result_str != "unknown":
+        if inference_result_str != 'unknown':
             break
         else:
-            #previous abduction
-            inference_result_str, direct_proof_scripts, new_direct_axioms = \
-            try_abduction(direct_proof_script, previous_axioms=axioms, expected='yes')
+            #phrasal abduction
+            #entailment proof
+            inference_result_str, direct_proof_scripts, new_direct_axioms, features = \
+                try_phrase_abduction(direct_proof_script, previous_axioms=axioms, features={}, expected='yes')
             current_axioms = axioms.union(new_direct_axioms)
-            if not inference_result_str == 'yes':
-                inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
-                    try_abduction(reverse_proof_script, previous_axioms=current_axioms, expected='no')
+            if inference_result_str == "unknown":
+                #contradiction proof
+                inference_result_str, reverse_proof_scripts, new_reverse_axioms, features = \
+                    try_phrase_abduction(reverse_proof_script, previous_axioms=axioms, features={}, expected='no')
                 current_axioms.update(new_reverse_axioms)
-            all_scripts = direct_proof_scripts + reverse_proof_scripts
-            if len(axioms) == len(current_axioms) or inference_result_str != 'unknown':
-                break
+            all_scripts = all_scripts + direct_proof_scripts + reverse_proof_scripts
+        if len(axioms) == len(current_axioms) or inference_result_str != 'unknown':
+            break
         axioms = current_axioms
 
     return inference_result_str, all_scripts
