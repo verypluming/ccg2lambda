@@ -36,6 +36,8 @@ from tactics import get_tactics
 from tree_tools import is_string
 from linguistic_tools import linguistic_relationship, get_wordnet_cascade
 from itertools import chain
+import urllib.parse
+import unicodedata
 
 class AxiomsPhrase(object):
     """
@@ -455,14 +457,18 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
                 word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
                 simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
-                if p_ph_word in synonyms:
-                    relation = "synonym"
-                if p_ph_word in antonyms:
-                    relation = "antonym"
-                if not relation:
-                    wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
-                if not relation:
-                    relation = check_stem(c_ph_word, p_ph_word)
+                #check the predicate relation if their type is the same
+                if typesim == 1.0:
+                    if p_ph_word in synonyms:
+                       relation = "synonym"
+                    if p_ph_word in antonyms:
+                        relation = "antonym"
+                    if not relation:
+                        wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
+                    if not relation:
+                        relation = check_stem(c_ph_word, p_ph_word)
+                    if not relation:
+                        relation = check_word2vec(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
                 features[case_p_pred+case_c_pred] = simlist
                 used_premises.add(case_p_pred)
@@ -523,16 +529,19 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         #    continue
                         premise_preds_args_id.extend(p_pred_args_id[premise_pred])
                         p_ph_word = re.sub("_", "", premise_pred)
-                        if p_ph_word in synonyms:
-                            # There is synonym with sub-goals. This shows phrase-axioms can be created.
-                            relation = "synonym"
-                        if p_ph_word in antonyms:
-                            # There is synonym with sub-goals. This shows phrase-axioms can be created.
-                            relation = "antonym"
-                        if not relation:
-                            wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
-                        if not relation:
-                            relation = check_stem(c_ph_word, p_ph_word)
+                        if calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists)) == 1.0:
+                            if p_ph_word in synonyms:
+                                # There is synonym with sub-goals. This shows phrase-axioms can be created.
+                                relation = "synonym"
+                            if p_ph_word in antonyms:
+                                # There is synonym with sub-goals. This shows phrase-axioms can be created.
+                                relation = "antonym"
+                            if not relation:
+                                wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
+                            if not relation:
+                                relation = check_stem(c_ph_word, p_ph_word)
+                            if not relation:
+                                relation = check_word2vec(c_ph_word, p_ph_word)
                 if relation:
                     phrase_pairs.append((premise_preds, c_preds, relation)) # Saved phrase pairs
 
@@ -872,6 +881,22 @@ def calc_argumentsim(sub_pred, prem_pred, pred_args):
         return 0.5
     else:
         return 0.0
+
+def check_word2vec(sub_pred, prem_pred):
+    threshold = 0.3 #tentatively. to do: optimize threshold
+    if unicodedata.category(sub_pred[0]) == "Lo":
+        #if Japanese, do URL encode
+        sub_pred = urllib.parse.quote(sub_pred)
+        prem_pred = urllib.parse.quote(prem_pred)
+    process = Popen(\
+    'curl http://localhost:5000/word2vec/similarity?w1='+ sub_pred +'\&w2='+ prem_pred, \
+    shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    similarity, err = process.communicate()
+    try:
+        if float(similarity.decode()) > threshold:
+            return "approx"
+    except ValueError:
+        return ""
 
 
 #unused functions
