@@ -35,9 +35,30 @@ from semantic_tools import is_theorem_defined
 from tactics import get_tactics
 from tree_tools import is_string
 from linguistic_tools import linguistic_relationship, get_wordnet_cascade
-from itertools import chain
+#from itertools import chain
 import urllib.parse
 import unicodedata
+from keras.models import load_model
+import numpy as np
+
+from gensim.models import KeyedVectors
+from nltk.corpus import stopwords
+import itertools
+import os
+import pandas as pd
+import scipy as sp
+import random
+from keras.models import Sequential, Model
+from keras.layers import Dense, Activation, Input, Embedding, LSTM, Merge, Bidirectional, Concatenate
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras.preprocessing.sequence import pad_sequences
+import keras.backend as K
+from keras.optimizers import Adadelta
+from keras.callbacks import ModelCheckpoint
+from keras.utils import plot_model
+from lxml import etree
+
+model = load_model('./sick_results/siamese_mlp_model.mm')
 
 class AxiomsPhrase(object):
     """
@@ -47,7 +68,7 @@ class AxiomsPhrase(object):
         pass
 
     def attempt(self, coq_scripts, doc, target, context=None):
-        return TryPhraseAbduction(coq_scripts, target)
+        return TryPhraseAbduction(coq_scripts, target, doc)
 
 def get_premise_lines_ex(coq_output_lines):
     premise_lines = []
@@ -123,7 +144,7 @@ def get_conclusion_lines_ex(coq_output_lines):
     return conclusion_lines
 
 
-def TryPhraseAbduction(coq_scripts, target):
+def TryPhraseAbduction(coq_scripts, target, doc):
     #assert len(coq_scripts) == 2
     direct_proof_script = coq_scripts[0]
     reverse_proof_script = coq_scripts[1]
@@ -134,21 +155,21 @@ def TryPhraseAbduction(coq_scripts, target):
 
     #entailment proof
     inference_result_str, direct_proof_scripts, new_direct_axioms, features = \
-        try_phrase_abduction(direct_proof_script,
+        try_phrase_abduction(direct_proof_script, doc, 
                             previous_axioms=axioms, features=features, expected='yes', target=target)
     current_axioms = axioms.union(new_direct_axioms)
     current_features = features
     if not inference_result_str == 'yes':
         #contradiction proof
         inference_result_str, reverse_proof_scripts, new_reverse_axioms, features = \
-            try_phrase_abduction(reverse_proof_script,
+            try_phrase_abduction(reverse_proof_script, doc, 
                             previous_axioms=current_axioms, features=current_features, expected='no', target=target)
         current_axioms.update(new_reverse_axioms)
     all_scripts = direct_proof_scripts + reverse_proof_scripts
     axioms = current_axioms
     return inference_result_str, all_scripts
     
-def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expected='yes', target='yes'):
+def try_phrase_abduction(coq_script, doc, previous_axioms=set(), features={}, expected='yes', target='yes'):
     current_features = features
     new_coq_script = insert_axioms_in_coq_script(previous_axioms, coq_script)
     current_tactics = get_tactics()
@@ -180,7 +201,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
                        "open formula": has_open_formula(output_lines)}
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms, features
-    axioms, features = make_phrase_axioms(premise_lines, conclusion, output_lines, expected, coq_script_debug)
+    axioms, features = make_phrase_axioms(premise_lines, conclusion, doc, output_lines, expected, coq_script_debug)
     current_features.update(features)
     #axioms = filter_wrong_axioms(axioms, coq_script) temporarily
     #add only newly generated axioms
@@ -202,14 +223,14 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
         print(json.dumps(features_log), file=sys.stderr)
     return inference_result_str, [new_coq_script], axioms, features
 
-def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None):
+def make_phrase_axioms(premises, conclusions, doc, coq_output_lines=None, expected='yes', coq_script_debug=None):
     axioms = set()
     features = {}
     #check sub-goals with normal variables
     #conclusions_normal = distinguish_normal_conclusions(conclusions)
 
     #if existential variables contain in sub-goals, create axioms for sub-goals with existential variables at first
-    axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected)
+    axioms, features = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, coq_script_debug, expected)
 
     #create axioms for sub-goals with normal variables
     #for conclusion in conclusions_normal:
@@ -342,7 +363,90 @@ def check_decomposed(line):
         return False
     return True
 
-def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug=None, expected="yes"):
+def text_to_word_list(text):
+    #preprocess and convert texts to a list of words
+    text = str(text)
+    text = text.lower()
+
+    # Clean the text
+    text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
+    text = re.sub(r"what's", "what is ", text)
+    text = re.sub(r"\'s", " ", text)
+    text = re.sub(r"\'ve", " have ", text)
+    text = re.sub(r"can't", "cannot ", text)
+    text = re.sub(r"n't", " not ", text)
+    text = re.sub(r"i'm", "i am ", text)
+    text = re.sub(r"\'re", " are ", text)
+    text = re.sub(r"\'d", " would ", text)
+    text = re.sub(r"\'ll", " will ", text)
+    text = re.sub(r",", " ", text)
+    text = re.sub(r"\.", " ", text)
+    text = re.sub(r"!", " ! ", text)
+    text = re.sub(r"\/", " ", text)
+    text = re.sub(r"\^", " ^ ", text)
+    text = re.sub(r"\+", " + ", text)
+    text = re.sub(r"\-", " - ", text)
+    text = re.sub(r"\=", " = ", text)
+    text = re.sub(r"'", " ", text)
+    text = re.sub(r"(\d+)(k)", r"\g<1>000", text)
+    text = re.sub(r":", " : ", text)
+    text = re.sub(r" e g ", " eg ", text)
+    text = re.sub(r" b g ", " bg ", text)
+    text = re.sub(r" u s ", " american ", text)
+    text = re.sub(r"\0s", "0", text)
+    text = re.sub(r" 9 11 ", "911", text)
+    text = re.sub(r"e - mail", "email", text)
+    text = re.sub(r"j k", "jk", text)
+    text = re.sub(r"\s{2,}", " ", text)
+    text = re.sub(r"_", " _ ", text)
+
+    text = text.split()
+
+    return text
+
+def embedding_sentence(sentence):
+    # to do: embeddings matrix and vocabulary should be created and saved
+    # to do: check if the format of sentence vector is correct(not using dataframe)
+    from gensim import corpora
+
+    # Prepare embedding
+    # to do: to be faster, load EMBEDDING_FILE using API https://github.com/RaRe-Technologies/gensim-data
+    EMBEDDING_FILE = './GoogleNews-vectors-negative300.bin'
+    stops = set(stopwords.words('english'))
+    #vocabulary = dict()
+    g = open('./sick_vocab.txt', 'r')
+    vocabulary = json.load(g)
+    inverse_vocabulary = ['<unk>'] # '<unk>' will never be used, it is only a placeholder for the [0, 0, ....0] embedding
+    word2vec = KeyedVectors.load_word2vec_format(EMBEDDING_FILE, binary=True)
+    q2n = []  # q2n -> sentence numbers representation
+    max_seq_length = 26 # check max_seq_length
+    for word in text_to_word_list(sentence):
+        # Check for unwanted words
+        if word in stops and word not in word2vec.vocab:
+            continue
+        # Just in case
+        #if word not in vocabulary:
+        #    vocabulary[word] = len(inverse_vocabulary)
+        #    q2n.append(len(inverse_vocabulary))
+        #    inverse_vocabulary.append(word)
+        #else:
+        q2n.append(vocabulary[word])
+    sentence_vector = pad_sequences([q2n], maxlen=max_seq_length)
+    return sentence_vector
+
+def get_sentence_vectors(doc):
+    sentence_vectors = []
+    tokens = doc.xpath('//tokens')
+    for i in range(len(tokens)):
+        sentence_surface = ' '.join(tokens[i].xpath('token/@surf'))
+        sentence_vector = embedding_sentence(sentence_surface)
+        sentence_vectors.append(sentence_vector)
+    return np.array(sentence_vectors)
+
+def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, coq_script_debug=None, expected="yes"):
+    sentence_vectors = get_sentence_vectors(doc) # to do: confirm if doc is correct
+    t_vector = sentence_vectors[0].reshape(1,26)
+    h_vector = sentence_vectors[1].reshape(1,26)
     coq_lists, param_lists, type_lists = [], [], []
     if coq_script_debug:
         coq_lists = coq_script_debug.split("\n")
@@ -633,9 +737,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     
 
     #select premise features whose similarity are max and min
-    sum_dist = {}
-    feature_dist = {}
-    return_feature = {}
+    #sum_dist = {}
+    #feature_dist = {}
+    #return_feature = {}
     #for k, v in features.items():
     #    keys = k.split("_")
     #    relation, premise, subgoal = keys[0], keys[1], keys[2]
@@ -655,7 +759,14 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
     #print(phrase_pairs) # this is a list of tuples of lists.
 
     #return set(axioms), return_feature
-    return set(axioms), features
+    new_axioms = []
+    for axiom in axioms:
+        #to do: consider how to create premise and sub-goal vector
+        predict = np.round(model.predict([t_vector, h_vector, embedding_sentence(premise_vector), embedding_sentence(sub-goal_vector)]))
+        #if axiom classifier is 1, confirm axioms
+        if int(predict) == 1:
+            new_axioms.append(axiom)
+    return set(new_axioms), features
 
 def make_phrases_from_premises_and_conclusions_ex_before(premises, conclusions, coq_script_debug=None, expected="yes"):
     coq_lists, param_lists, type_lists = [], [], []
