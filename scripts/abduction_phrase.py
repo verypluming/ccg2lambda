@@ -143,7 +143,7 @@ def TryPhraseAbduction(coq_scripts, target):
         inference_result_str, reverse_proof_scripts, new_reverse_axioms, features = \
             try_phrase_abduction(reverse_proof_script,
                             previous_axioms=current_axioms, features=current_features, expected='no', target=target)
-        current_axioms = axioms.update(new_reverse_axioms)
+        current_axioms.update(new_reverse_axioms)
     all_scripts = direct_proof_scripts + reverse_proof_scripts
     axioms = current_axioms
     return inference_result_str, all_scripts
@@ -181,7 +181,8 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
         return 'unknown', [], previous_axioms, features
     axioms, features = make_phrase_axioms(premise_lines, conclusion, output_lines, expected, coq_script_debug)
     #axioms = filter_wrong_axioms(axioms, coq_script) temporarily
-    axioms = axioms.union(previous_axioms)
+    #add only newly generated axioms
+    axioms = axioms.difference(previous_axioms)
     new_coq_script = insert_axioms_in_coq_script(axioms, coq_script_debug)
     process = Popen(
         new_coq_script,
@@ -483,6 +484,17 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         case_p_pred,
                         case_c_pred)
                     break
+                elif relation == "antonym" and "Entity -> Prop" in check_types(c_ph_word, type_lists):
+                    #check if entailment axiom was generated
+                    exist_axioms = [axiom for axiom in axioms if p in axiom]
+                    if len(exist_axioms) > 0:
+                        for exist_axiom in exist_axioms:
+                            axioms.remove(exist_axiom)
+                    #antonym axiom for entity->prop predicates
+                    axiom = 'Axiom ax_case_phrase_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F x -> F y  -> False.'.format(
+                        case_p_pred,
+                        case_c_pred)
+                    break
                 elif relation == "antonym":
                     #check if entailment axiom was generated
                     exist_axioms = [axiom for axiom in axioms if p in axiom]
@@ -494,11 +506,11 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         case_p_pred,
                         case_c_pred)
                     break
-            if relation != "antonym":
-                axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
-            if relation:
-                covered_conclusions.add(case_c_pred)
-                axioms.append(axiom)
+        if relation != "antonym":
+            axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
+        if relation:
+            covered_conclusions.add(case_c_pred)
+            axioms.append(axiom)
 
     #create axioms about sub-goals without case information
     exclude_preds_in_conclusion = {
@@ -577,6 +589,17 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                                             axioms.remove(exist_axiom)
                                     #antonym axiom for event predicates
                                     axiom = 'Axiom ax_phrase_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
+                                        premise_pred,
+                                        p)
+                                    break
+                                elif phrase_pair[2] == "antonym" and "Entity -> Prop" in check_types(c_ph_word, type_lists):
+                                    #check if entailment axiom was generated
+                                    exist_axioms = [axiom for axiom in axioms if p in axiom]
+                                    if len(exist_axioms) > 0:
+                                        for exist_axiom in exist_axioms:
+                                            axioms.remove(exist_axiom)
+                                    #antonym axiom for entity->prop predicates
+                                    axiom = 'Axiom ax_phrase_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F x -> F y  -> False.'.format(
                                         premise_pred,
                                         p)
                                     break
