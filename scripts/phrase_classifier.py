@@ -155,11 +155,12 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
                      train_df.sentence2.map(lambda x: len(x)).max(),
                      test_df.sentence1.map(lambda x: len(x)).max(),
                      test_df.sentence2.map(lambda x: len(x)).max())
-
-    max_phrase_length = max(train_df.premise.map(lambda x: len(x)).max(),
-                     train_df.sub-goal.map(lambda x: len(x)).max(),
-                     test_df.premise.map(lambda x: len(x)).max(),
-                     test_df.sub-goal.map(lambda x: len(x)).max())
+    
+    max_phrase_length = max_seq_length #temporarily
+    #max_phrase_length = max(train_df.premise.map(lambda x: len(x)).max(),
+    #                 train_df.sub-goal.map(lambda x: len(x)).max(),
+    #                 test_df.premise.map(lambda x: len(x)).max(),
+    #                 test_df.sub-goal.map(lambda x: len(x)).max())
     # Split to train validation
     validation_size = 2000
     X = train_df[sentences_cols]
@@ -470,7 +471,7 @@ def load_features(recalc=None, results=None):
                         #print(score, kind, feature)
                         target.append(score)
                         premises.append(premise)
-                        sub-goals.append(sub-goal)
+                        sub-goals.append("".join(sub-goal))
                         filenames.append(filename)
             except:
                 continue

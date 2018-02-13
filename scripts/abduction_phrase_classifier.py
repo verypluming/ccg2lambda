@@ -731,7 +731,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, co
                                 axiom += p+" "+' '.join('x' + str(i) for i in c_pred_args_id[p])+"."
                             #print(axiom)
                             covered_conclusions.add(p)
-                            axioms.append(axiom)
+                            axioms.append((axiom))
 
                         
                     
@@ -760,12 +760,16 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, co
 
     #return set(axioms), return_feature
     new_axioms = []
-    for axiom in axioms:
-        #to do: consider how to create premise and sub-goal vector
-        predict = np.round(model.predict([t_vector, h_vector, embedding_sentence(premise_vector), embedding_sentence(sub-goal_vector)]))
+    for k, v in features:
+        #to do: consider how to create premise and sub-goal vector(maybe max_length is different)
+        predict = np.round(model.predict([t_vector, h_vector, embedding_sentence(k).reshape(1,26), embedding_sentence("".join(v)).reshape(1,26)]))
         #if axiom classifier is 1, confirm axioms
         if int(predict) == 1:
-            new_axioms.append(axiom)
+            for sub-goal in v:
+                pattern = re.compile(sub-goal+" : forall")
+                for a in axioms:
+                    if re.search(pattern, a):
+                        new_axioms.append(a)
     return set(new_axioms), features
 
 def make_phrases_from_premises_and_conclusions_ex_before(premises, conclusions, coq_script_debug=None, expected="yes"):
