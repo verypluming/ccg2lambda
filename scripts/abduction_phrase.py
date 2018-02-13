@@ -167,14 +167,10 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
             #positive label
             features_log = {"phrases": current_features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
-        else:
-            #unknown label
+        elif target == "unknown" and expected != "unknown":
+            #negative label
             features_log = {"phrases": current_features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
-        #elif target == "unknown" and expected != "unknown":
-            #negative label
-            #features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
-            #print(json.dumps(features_log), file=sys.stderr)
         return expected, [new_coq_script], previous_axioms, features
     #premise_lines = get_premise_lines(output_lines)
     #for phrase extraction, check all relations between premise_lines and conclusions
@@ -200,14 +196,10 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
         #positive label
         features_log = {"phrases": current_features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
-    else:
-        #unknown label
+    elif target == "unknown" and inference_result_str != "unknown":
+        #negative label
         features_log = {"phrases": current_features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
-    #elif target == "unknown" and inference_result_str != "unknown":
-        #negative label
-        #features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
-        #print(json.dumps(features_log), file=sys.stderr)
     return inference_result_str, [new_coq_script], axioms, features
 
 def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None):
