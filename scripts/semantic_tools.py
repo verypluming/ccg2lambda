@@ -82,13 +82,22 @@ def prove_doc(doc, abduction=None, target=None):
             inference_result_str = 'unknown'
     if abduction and inference_result_str == 'unknown':
         if target:
+            from abduction_spsa import AxiomsWordnet
+            #previous word-to-word axiom injection
+            abduction = AxiomsWordnet()
             inference_result_str, abduction_scripts = \
-            abduction.attempt(coq_scripts, doc, target)
-            coq_scripts.extend(abduction_scripts)
-            return inference_result_str, coq_scripts
+            abduction.attempt(coq_scripts)
+            coq_scripts.extend(abduction_scripts)        
+            if inference_result_str == 'unknown':
+                #phrase-to-phrase axiom injection
+                from abduction_phrase import AxiomsPhrase
+                abduction = AxiomsPhrase()
+                inference_result_str, abduction_scripts = \
+                abduction.attempt(coq_scripts, doc, target)
+                coq_scripts.extend(abduction_scripts)
         else:
             inference_result_str, abduction_scripts = \
-                abduction.attempt(coq_scripts, doc)
+            abduction.attempt(coq_scripts, doc)
             coq_scripts.extend(abduction_scripts)
             #if only phrasal axioms are not enough in eval, attempt normal axiom injection
             if inference_result_str == 'unknown':

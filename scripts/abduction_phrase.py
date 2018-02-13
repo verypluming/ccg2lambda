@@ -124,7 +124,7 @@ def get_conclusion_lines_ex(coq_output_lines):
 
 
 def TryPhraseAbduction(coq_scripts, target):
-    assert len(coq_scripts) == 2
+    #assert len(coq_scripts) == 2
     direct_proof_script = coq_scripts[0]
     reverse_proof_script = coq_scripts[1]
     axioms = set()
@@ -847,7 +847,19 @@ def check_stem(sub_pred, prem_pred):
     elif linguistic_relationship(stemmer.stem(prem_pred), stemmer.stem(sub_pred)):
         return "wordnet_stem"
     else:
-        return ""
+        porter = stem.PorterStemmer()
+        if porter.stem(sub_pred) == porter.stem(prem_pred):
+            return "stem"
+        elif linguistic_relationship(porter.stem(prem_pred), porter.stem(sub_pred)):
+            return "wordnet_stem"
+        else:
+            snow = stem.SnowballStemmer("english")
+            if snow.stem(sub_pred) == snow.stem(prem_pred):
+                return "stem"
+            elif linguistic_relationship(snow.stem(prem_pred), snow.stem(sub_pred)):
+                return "wordnet_stem"
+            else:
+                return ""
 
 def check_rte(expected):
     rte_list = ['yes', 'no', 'unknown']
@@ -883,7 +895,7 @@ def calc_argumentsim(sub_pred, prem_pred, pred_args):
         return 0.0
 
 def check_word2vec(sub_pred, prem_pred):
-    threshold = 0.3 #tentatively. to do: optimize threshold
+    threshold = 0.4 #tentatively. to do: optimize threshold
     if unicodedata.category(sub_pred[0]) == "Lo":
         #if Japanese, do URL encode
         sub_pred = urllib.parse.quote(sub_pred)
