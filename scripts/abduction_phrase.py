@@ -510,8 +510,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                         case_p_pred,
                         case_c_pred)
                     break
-        if relation != "antonym":
-            axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
+            if relation != "antonym":
+                axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
         #if relation:
         #    covered_conclusions.add(case_c_pred)
         #    axioms.append(axiom)
