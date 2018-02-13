@@ -76,7 +76,7 @@ def get_premise_lines_ex(coq_output_lines):
                 # _pred x (Subj x0)
                 premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if premise != "":
-                #print("premise:{0}".format(premise), file=sys.stderr)
+                print("premise:{0}".format(premise), file=sys.stderr)
                 premise_lines.append(premise)
     return premise_lines
 
@@ -118,7 +118,7 @@ def get_conclusion_lines_ex(coq_output_lines):
                 # _pred x (Subj x0)
                 conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
             if conclusion != "":
-                #print("conclusion:{0}".format(conclusion), file=sys.stderr)
+                print("conclusion:{0}".format(conclusion), file=sys.stderr)
                 conclusion_lines.append(conclusion)
     return conclusion_lines
 
@@ -164,16 +164,12 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     if is_theorem_almost_defined(output_lines):
         if expected == target and target != "unknown":
             #positive label
-            features_log = {"phrases": features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
+            features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
-        else:
-            #unknown label
-            features_log = {"phrases": features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
-            print(json.dumps(features_log), file=sys.stderr)
-        #elif target == "unknown" and expected != "unknown":
+        elif target == "unknown" and expected != "unknown":
             #negative label
-            #features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
-            #print(json.dumps(features_log), file=sys.stderr)
+            features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
+            print(json.dumps(features_log), file=sys.stderr)
         return expected, [new_coq_script], previous_axioms, features
     #premise_lines = get_premise_lines(output_lines)
     #for phrase extraction, check all relations between premise_lines and conclusions
@@ -196,16 +192,12 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
     if inference_result_str == target and target != "unknown":
         #positive label
-        features_log = {"phrases": features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
+        features_log = {"features": features, "validity": 1.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
-    else:
-        #unknown label
-        features_log = {"phrases": features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
-        print(json.dumps(features_log), file=sys.stderr)
-    #elif target == "unknown" and inference_result_str != "unknown":
+    elif target == "unknown" and inference_result_str != "unknown":
         #negative label
-        #features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
-        #print(json.dumps(features_log), file=sys.stderr)
+        features_log = {"features": features, "validity": 0.0, "gold": target, "expected": expected, "premise": premise_lines, "subgoals": conclusion}
+        print(json.dumps(features_log), file=sys.stderr)
     return inference_result_str, [new_coq_script], axioms, features
 
 def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None):
@@ -416,9 +408,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
     #create axioms about sub-goals containing case information
     case_c_preds = [c for c, c_args in c_pred_args.items() if contains_case(str(c_args)) and len(c_args[0]) == 1]
     for case_c_pred in case_c_preds:
-        #new_instance = Thesaurus(re.sub("_", "", case_c_pred))
-        #synonyms = new_instance.get_synonym()
-        #antonyms = new_instance.get_antonym()
+        new_instance = Thesaurus(re.sub("_", "", case_c_pred))
+        synonyms = new_instance.get_synonym()
+        antonyms = new_instance.get_antonym()
         case_c_arg = c_pred_args[case_c_pred][0][0]
         #gen_c_arg = re.sub(r'\([A-Z][a-z][a-z][a-z]?\s([xz][0-9])*\)',r'\1', case_c_arg) #extract x1 from Subj x1
         #ex_p_pred = [prem for prem, p_args in p_pred_args.items() if set(p_args).issubset([gen_c_arg])] #x1 event
@@ -449,7 +441,6 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
             #    case_p_preds_args_id.extend(p_pred_args_id[p_pred])
             #    continue
         if len(case_p_preds) > 0:
-            features["".join(case_p_preds)] = case_c_pred #temporarily
             relation = ""
             axiom = 'Axiom ax_case_phrase{0}{1} : forall {2}, '.format(
                 "".join(case_p_preds),
@@ -462,26 +453,25 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 #extract features of these candidates by type, ngram, WN(sim, relation), W2V, RTE_gold
                 c_ph_word = re.sub("_", "", case_c_pred)
                 p_ph_word = re.sub("_", "", case_p_pred)
-                #typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
-                #ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
-                #wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
-                #word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
-                #simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
-                wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
+                typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
+                ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
+                wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
+                word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
+                simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
                 #check the predicate relation if their type is the same
-                #if typesim == 1.0:
-                #    if p_ph_word in synonyms:
-                #       relation = "synonym"
-                #    if p_ph_word in antonyms:
-                #        relation = "antonym"
-                #    if not relation:
-                #        wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
-                #    if not relation:
-                #        relation = check_stem(c_ph_word, p_ph_word)
-                #    if not relation:
-                #        relation = check_word2vec(c_ph_word, p_ph_word)
+                if typesim == 1.0:
+                    if p_ph_word in synonyms:
+                       relation = "synonym"
+                    if p_ph_word in antonyms:
+                        relation = "antonym"
+                    if not relation:
+                        wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
+                    if not relation:
+                        relation = check_stem(c_ph_word, p_ph_word)
+                    if not relation:
+                        relation = check_word2vec(c_ph_word, p_ph_word)
                 #rte = check_rte(expected)
-                #features[case_p_pred+case_c_pred] = simlist
+                features[case_p_pred+case_c_pred] = simlist
                 used_premises.add(case_p_pred)
                 if relation == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
                     #check if entailment axiom was generated
@@ -518,11 +508,9 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                     break
         if relation != "antonym":
             axiom += case_c_pred+" "+' '.join('x' + str(i) for i in c_pred_args_id[case_c_pred])+"."
-        #if relation:
-        #    covered_conclusions.add(case_c_pred)
-        #    axioms.append(axiom)
-        covered_conclusions.add(case_c_pred)
-        axioms.append(axiom)
+        if relation:
+            covered_conclusions.add(case_c_pred)
+            axioms.append(axiom)
 
     #create axioms about sub-goals without case information
     exclude_preds_in_conclusion = {
@@ -544,37 +532,34 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                 relation = ""
                 for p in c_preds:
                     c_ph_word = re.sub("_", "", p)
-                    #new_instance = Thesaurus(c_ph_word)
-                    #synonyms = new_instance.get_synonym()
-                    #antonyms = new_instance.get_antonym()
+                    new_instance = Thesaurus(c_ph_word)
+                    synonyms = new_instance.get_synonym()
+                    antonyms = new_instance.get_antonym()
                     for premise_pred in premise_preds:
                         #if the premise has been already used for axiom containing cases(ex. lady(Subj x) -> woman(Subj x), it will be unnecessary)
                         #if premise_pred in used_premises:
                         #    continue
                         premise_preds_args_id.extend(p_pred_args_id[premise_pred])
                         p_ph_word = re.sub("_", "", premise_pred)
-                        wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
-                        #if calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists)) == 1.0:
-                        #    if p_ph_word in synonyms:
-                        #        # There is synonym with sub-goals. This shows phrase-axioms can be created.
-                        #        relation = "synonym"
-                        #    if p_ph_word in antonyms:
-                        #        # There is synonym with sub-goals. This shows phrase-axioms can be created.
-                        #        relation = "antonym"
-                        #    if not relation:
-                        #        wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
-                        #    if not relation:
-                        #        relation = check_stem(c_ph_word, p_ph_word)
-                        #    if not relation:
-                        #        relation = check_word2vec(c_ph_word, p_ph_word)
-                #if relation:
-                #    phrase_pairs.append((premise_preds, c_preds, relation)) # Saved phrase pairs
-                phrase_pairs.append((premise_preds, c_preds, relation)) # Saved phrase pairs
+                        if calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists)) == 1.0:
+                            if p_ph_word in synonyms:
+                                # There is synonym with sub-goals. This shows phrase-axioms can be created.
+                                relation = "synonym"
+                            if p_ph_word in antonyms:
+                                # There is synonym with sub-goals. This shows phrase-axioms can be created.
+                                relation = "antonym"
+                            if not relation:
+                                wordnetrel, relation = check_wordnetrel(c_ph_word, p_ph_word)
+                            if not relation:
+                                relation = check_stem(c_ph_word, p_ph_word)
+                            if not relation:
+                                relation = check_word2vec(c_ph_word, p_ph_word)
+                if relation:
+                    phrase_pairs.append((premise_preds, c_preds, relation)) # Saved phrase pairs
 
                 for phrase_pair in phrase_pairs:                    
                     for p in phrase_pair[1]:
                         if p not in covered_conclusions:
-                            features["".join(premise_preds)] = p #temporarily
                             axiom = 'Axiom ax_phrase_{0}{1}{2} : forall {3}, '.format(
                                 phrase_pair[2],
                                 "".join(premise_preds),
@@ -588,13 +573,13 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
                                 #extract features of these candidates by type, ngram, WN(sim, relation), W2V, RTE_gold
                                 c_ph_word = re.sub("_", "", p)
                                 p_ph_word = re.sub("_", "", premise_pred)
-                                #typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
-                                #ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
-                                #wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
-                                #word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
-                                #simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
+                                typesim = calc_typesim(check_types(c_ph_word, type_lists), check_types(p_ph_word, type_lists))
+                                ngramsim = calc_ngramsim(c_ph_word, p_ph_word)
+                                wordnetsim = calc_wordnetsim(c_ph_word, p_ph_word)
+                                word2vecsim = calc_word2vecsim(c_ph_word, p_ph_word)
+                                simlist = [typesim, ngramsim, wordnetsim, word2vecsim]
                                 #rte = check_rte(expected)
-                                #features[premise_pred+p] = simlist
+                                features[premise_pred+p] = simlist
                                 #TO DO: how to consider antonym phrasal axiom
                                 if phrase_pair[2] == "antonym" and "Event -> Prop" in check_types(c_ph_word, type_lists):
                                     #check if entailment axiom was generated
@@ -642,26 +627,25 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_scr
     sum_dist = {}
     feature_dist = {}
     return_feature = {}
-    #for k, v in features.items():
-    #    keys = k.split("_")
-    #    relation, premise, subgoal = keys[0], keys[1], keys[2]
-    #    if subgoal in sum_dist:
-    #        sum_dist[subgoal][premise] = sum(v)
-    #        feature_dist[subgoal][premise] = v
-    #    else:
-    #        sum_dist[subgoal] = {premise: sum(v)}
-    #        feature_dist[subgoal] = {premise: v}
+    for k, v in features.items():
+        keys = k.split("_")
+        relation, premise, subgoal = keys[0], keys[1], keys[2]
+        if subgoal in sum_dist:
+            sum_dist[subgoal][premise] = sum(v)
+            feature_dist[subgoal][premise] = v
+        else:
+            sum_dist[subgoal] = {premise: sum(v)}
+            feature_dist[subgoal] = {premise: v}
 
-    #for s, f in sum_dist.items():
-    #    max_premise = max(f.items(), key=lambda x:x[1])[0]
-    #    min_premise = min(f.items(), key=lambda x:x[1])[0]
-    #    max_feature = feature_dist[s][max_premise]
-    #    min_feature = feature_dist[s][min_premise]
-    #    return_feature[max_premise+"_"+min_premise+"_"+s] = max_feature + min_feature
+    for s, f in sum_dist.items():
+        max_premise = max(f.items(), key=lambda x:x[1])[0]
+        min_premise = min(f.items(), key=lambda x:x[1])[0]
+        max_feature = feature_dist[s][max_premise]
+        min_feature = feature_dist[s][min_premise]
+        return_feature[max_premise+"_"+min_premise+"_"+s] = max_feature + min_feature
     #print(phrase_pairs) # this is a list of tuples of lists.
 
-    #return set(axioms), return_feature
-    return set(axioms), features
+    return set(axioms), return_feature
 
 def make_phrases_from_premises_and_conclusions_ex_before(premises, conclusions, coq_script_debug=None, expected="yes"):
     coq_lists, param_lists, type_lists = [], [], []
