@@ -149,6 +149,7 @@ def TryPhraseAbduction(coq_scripts, target):
     return inference_result_str, all_scripts
     
 def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expected='yes', target='yes'):
+    current_features = features
     new_coq_script = insert_axioms_in_coq_script(previous_axioms, coq_script)
     current_tactics = get_tactics()
     #debug_tactics = 'repeat nltac_base. try substitution. Qed'
@@ -164,11 +165,11 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     if is_theorem_almost_defined(output_lines):
         if expected == target and target != "unknown":
             #positive label
-            features_log = {"phrases": features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
+            features_log = {"phrases": current_features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
         else:
             #unknown label
-            features_log = {"phrases": features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
+            features_log = {"phrases": current_features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
             print(json.dumps(features_log), file=sys.stderr)
         #elif target == "unknown" and expected != "unknown":
             #negative label
@@ -184,6 +185,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms, features
     axioms, features = make_phrase_axioms(premise_lines, conclusion, output_lines, expected, coq_script_debug)
+    current_features.update(features)
     #axioms = filter_wrong_axioms(axioms, coq_script) temporarily
     #add only newly generated axioms
     axioms = axioms.difference(previous_axioms)
@@ -196,11 +198,11 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), features={}, expecte
     inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
     if inference_result_str == target and target != "unknown":
         #positive label
-        features_log = {"phrases": features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
+        features_log = {"phrases": current_features, "validity": 1.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
     else:
         #unknown label
-        features_log = {"phrases": features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
+        features_log = {"phrases": current_features, "validity": 0.0, "gold": target, "proof": expected, "premise": premise_lines, "subgoals": conclusion}
         print(json.dumps(features_log), file=sys.stderr)
     #elif target == "unknown" and inference_result_str != "unknown":
         #negative label
