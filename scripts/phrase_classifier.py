@@ -242,7 +242,7 @@ def siamese_mlp_model(load_target, load_sick_id, premises, subgoals, results):
                             validation_data=([X_validation['left'], X_validation['right'], X_validation['premise'], X_validation['subgoal']], Y_validation))
 
     print("Training time finished.\n{} epochs in {}".format(n_epoch, datetime.timedelta(seconds=time()-training_start_time)))
-    trained.save('./'+results+'/siamese_mlp_model.mm')
+    model.save('./'+results+'/siamese_mlp_model.mm')
     return trained
 
 def siamese_mlp_model_before(load_source, load_target, load_sick_id, results):

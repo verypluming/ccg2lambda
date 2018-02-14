@@ -82,7 +82,7 @@ def prove_doc(doc, abduction=None, target=None):
             inference_result_str = 'unknown'
     if abduction and inference_result_str == 'unknown':
         if target:
-            from abduction_phrase import AxiomsPhrase
+            from abduction_phrase_classifier import AxiomsPhrase
             abduction = AxiomsPhrase()
             inference_result_str, abduction_scripts = \
             abduction.attempt(coq_scripts, doc, target)
