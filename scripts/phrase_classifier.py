@@ -39,7 +39,7 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.externals import joblib
 from sklearn.cross_validation import cross_val_score, train_test_split
 
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras.layers import Dense, Activation, Input, Embedding, LSTM, Merge, Bidirectional, Concatenate
 from keras.wrappers.scikit_learn import KerasClassifier
 from keras.preprocessing.sequence import pad_sequences
