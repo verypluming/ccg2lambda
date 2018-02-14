@@ -765,8 +765,8 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, co
         predict = np.round(model.predict([t_vector, h_vector, embedding_sentence(k).reshape(1,26), embedding_sentence("".join(v)).reshape(1,26)]))
         #if axiom classifier is 1, confirm axioms
         if int(predict) == 1:
-            for sub-goal in v:
-                pattern = re.compile(sub-goal+" : forall")
+            for subgoal in v:
+                pattern = re.compile(subgoal+" : forall")
                 for a in axioms:
                     if re.search(pattern, a):
                         new_axioms.append(a)

@@ -95,7 +95,7 @@ def text_to_word_list(text):
 
 
 
-def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
+def siamese_mlp_model(load_target, load_sick_id, premises, subgoals, results):
     # concatenate sentence vector obtained from siamese-model and premise-subgoal similarity vector obtained from proof
     # Prepare embedding
     EMBEDDING_FILE = './GoogleNews-vectors-negative300.bin'
@@ -103,7 +103,7 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
     vocabulary = dict()
     inverse_vocabulary = ['<unk>']  # '<unk>' will never be used, it is only a placeholder for the [0, 0, ....0] embedding
     word2vec = KeyedVectors.load_word2vec_format(EMBEDDING_FILE, binary=True)
-    sentences_cols = ['sentence1', 'sentence2', 'premise', 'sub-goal']
+    sentences_cols = ['sentence1', 'sentence2', 'premise', 'subgoal']
 
     # Load training and test set
     inputfile_sentences = []
@@ -112,10 +112,10 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
         s = f.readlines()
         f.close()
         premise = premises[i]
-        sub-goal = sub-goals[i]
+        subgoal = subgoals[i]
         target = label
-        inputfile_sentences.append([s[0].strip(), s[1], premise, sub-goal, target])
-    df = pd.DataFrame(inputfile_sentences, columns=['sentence1', 'sentence2', 'premise', 'sub-goal', 'target'])
+        inputfile_sentences.append([s[0].strip(), s[1], premise, subgoal, target])
+    df = pd.DataFrame(inputfile_sentences, columns=['sentence1', 'sentence2', 'premise', 'subgoal', 'target'])
     half = int(len(inputfile_sentences)/2)
     train_df = df[:half]
     test_df = df[half:]
@@ -158,9 +158,9 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
     
     max_phrase_length = max_seq_length #temporarily
     #max_phrase_length = max(train_df.premise.map(lambda x: len(x)).max(),
-    #                 train_df.sub-goal.map(lambda x: len(x)).max(),
+    #                 train_df.subgoal.map(lambda x: len(x)).max(),
     #                 test_df.premise.map(lambda x: len(x)).max(),
-    #                 test_df.sub-goal.map(lambda x: len(x)).max())
+    #                 test_df.subgoal.map(lambda x: len(x)).max())
     # Split to train validation
     validation_size = 2000
     X = train_df[sentences_cols]
@@ -169,9 +169,9 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
     X_train, X_validation, Y_train, Y_validation = train_test_split(X, Y, test_size=validation_size)
 
     # Split to dicts
-    X_train = {'left': X_train.sentence1, 'right': X_train.sentence2, 'premise': X_train.premise, 'sub-goal': X_train.sub-goal}
-    X_validation = {'left': X_validation.sentence1, 'right': X_validation.sentence2, 'premise': X_validation.premise, 'sub-goal': X_validation.sub-goal}
-    X_test = {'left': test_df.sentence1, 'right': test_df.sentence2, 'premise': test_df.premise, 'sub-goal': test_df.sub-goal}
+    X_train = {'left': X_train.sentence1, 'right': X_train.sentence2, 'premise': X_train.premise, 'subgoal': X_train.subgoal}
+    X_validation = {'left': X_validation.sentence1, 'right': X_validation.sentence2, 'premise': X_validation.premise, 'subgoal': X_validation.subgoal}
+    X_test = {'left': test_df.sentence1, 'right': test_df.sentence2, 'premise': test_df.premise, 'subgoal': test_df.subgoal}
 
     # Convert labels to their numpy representations
     Y_train = Y_train.values
@@ -181,7 +181,7 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
     for dataset, side in itertools.product([X_train, X_validation], ['left', 'right']):
         dataset[side] = pad_sequences(dataset[side], maxlen=max_seq_length)
 
-    for dataset, side in itertools.product([X_train, X_validation], ['premise', 'sub-goal']):
+    for dataset, side in itertools.product([X_train, X_validation], ['premise', 'subgoal']):
         dataset[side] = pad_sequences(dataset[side], maxlen=max_phrase_length)
 
     # Make sure everything is ok
@@ -211,24 +211,24 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
     th_output = Concatenate()([left_output, right_output])
 
     premise_input = Input(shape=(max_phrase_length,), dtype='int32')
-    sub-goal_input = Input(shape=(max_phrase_length,), dtype='int32')
+    subgoal_input = Input(shape=(max_phrase_length,), dtype='int32')
     
     phrase_embedding_layer = Embedding(len(embeddings), embedding_dim, weights=[embeddings], input_length=max_phrase_length, trainable=False)
     
     encoded_premise = phrase_embedding_layer(premise_input)
-    encoded_sub-goal = phrase_embedding_layer(sub-goal_input)
+    encoded_subgoal = phrase_embedding_layer(subgoal_input)
 
     shared_phrase_lstm = Bidirectional(LSTM(n_hidden))
 
     premise_output = shared_phrase_lstm(encoded_premise)
-    sub-goal_output = shared_phrase_lstm(encoded_sub-goal)
+    subgoal_output = shared_phrase_lstm(encoded_subgoal)
 
-    ps_output = Concatenate()([premise_output, sub-goal_output])
+    ps_output = Concatenate()([premise_output, subgoal_output])
 
     merge_input = Concatenate()([th_output, ps_output])
 
     predictions = Dense(1, init='uniform', activation='sigmoid')(merge_input)
-    model = Model([left_input, right_input, premise_input, sub-goal_input], outputs=predictions)
+    model = Model([left_input, right_input, premise_input, subgoal_input], outputs=predictions)
 
     # Adadelta optimizer, with gradient clipping by norm
     optimizer = Adadelta(clipnorm=gradient_clipping_norm)
@@ -238,8 +238,8 @@ def siamese_mlp_model(load_target, load_sick_id, premises, sub-goals, results):
     # Start training
     training_start_time = time()
 
-    trained = model.fit([X_train['left'], X_train['right'], X_train['premise'], X_train['sub-goal']], Y_train, batch_size=batch_size, epochs=n_epoch,
-                            validation_data=([X_validation['left'], X_validation['right'], X_validation['premise'], X_validation['sub-goal']], Y_validation))
+    trained = model.fit([X_train['left'], X_train['right'], X_train['premise'], X_train['subgoal']], Y_train, batch_size=batch_size, epochs=n_epoch,
+                            validation_data=([X_validation['left'], X_validation['right'], X_validation['premise'], X_validation['subgoal']], Y_validation))
 
     print("Training time finished.\n{} epochs in {}".format(n_epoch, datetime.timedelta(seconds=time()-training_start_time)))
     trained.save('./'+results+'/siamese_mlp_model.mm')
@@ -455,7 +455,7 @@ def load_features(recalc=None, results=None):
         files = files + files2
         target = []
         premises = []
-        sub-goals = []
+        subgoals = []
         filenames = []
         for file in files:
             f = open(file,"r")
@@ -467,11 +467,11 @@ def load_features(recalc=None, results=None):
                     for k, v in temp[t]["phrases"].items():
                         score = temp[t]["validity"]
                         premise = k
-                        sub-goal = v
+                        subgoal = v
                         #print(score, kind, feature)
                         target.append(score)
                         premises.append(premise)
-                        sub-goals.append("".join(sub-goal))
+                        subgoals.append("".join(subgoal))
                         filenames.append(filename)
             except:
                 continue
@@ -479,15 +479,15 @@ def load_features(recalc=None, results=None):
         with open(results+'/features.pickle', 'wb') as out_f:
             np.save(out_f, target)
             np.save(out_f, premises)
-            np.save(out_f, sub-goals)
+            np.save(out_f, subgoals)
             np.save(out_f, filenames)
     else:
         with open(results+'/features.pickle', 'rb') as in_f:
             target = np.load(in_f)
             premises = np.load(in_f)
-            sub-goals = np.load(in_f)
+            subgoals = np.load(in_f)
             filenames = np.load(in_f)
-    return target, premises, sub-goals, filenames
+    return target, premises, subgoals, filenames
 
 def load_features_before(recalc=None, results=None):
     if recalc == 1:
@@ -543,7 +543,7 @@ def main():
 
     # Get training and trial features
     #target, source, source_phrase, filenames = load_features(1, args.results)
-    target, premises, sub-goals, filenames = load_features(1, args.results)
+    target, premises, subgoals, filenames = load_features(1, args.results)
     #random.seed(23)
     #random.shuffle(train)
     #random.shuffle(test)
@@ -553,14 +553,14 @@ def main():
     #train_phrases, trial_phrases = source_phrase[:half], source_phrase[half:]
     train_targets, trial_targets = target[:half], target[half:]
     train_premises, trial_premises = premises[:half], premises[half:]
-    train_sub-goals, trial_sub-goals = sub-goals[:half], sub-goals[half:]
+    train_subgoals, trial_subgoals = subgoals[:half], subgoals[half:]
     print ('test size: {0}, training size: {1}'.format(len(trial_targets), len(train_targets)))
     
     # Train the regressor
     #clf = classification(train_sources, train_targets, trial_sources, trial_targets, args.results)
     #Train multiperceptron with training dataset
     #clf = multiperceptron(np.array(source), np.array(target), args.results)
-    siamese = siamese_mlp_model(np.array(target), np.array(filenames), np.array(premises), np.array(sub-goals), args.results)
+    siamese = siamese_mlp_model(np.array(target), np.array(filenames), np.array(premises), np.array(subgoals), args.results)
 
     # Apply regressor to trial data
     #outputs = clf.predict(trial_sources)
