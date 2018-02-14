@@ -760,7 +760,7 @@ def make_phrases_from_premises_and_conclusions_ex(premises, conclusions, doc, co
 
     #return set(axioms), return_feature
     new_axioms = []
-    for k, v in features:
+    for k, v in features.items():
         #to do: consider how to create premise and sub-goal vector(maybe max_length is different)
         predict = np.round(model.predict([t_vector, h_vector, embedding_sentence(k).reshape(1,26), embedding_sentence("".join(v)).reshape(1,26)]))
         #if axiom classifier is 1, confirm axioms
