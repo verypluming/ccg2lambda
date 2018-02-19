@@ -44,6 +44,79 @@ class AxiomsPhraseEval(object):
     def attempt(self, coq_scripts, doc, context=None):
         return TryPhraseAbduction(coq_scripts)
 
+def get_premise_lines_ex(coq_output_lines):
+    premise_lines = []
+    line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(
+        coq_output_lines)
+    if not line_index_last_conclusion_sep:
+        return premise_lines
+    for line in coq_output_lines[line_index_last_conclusion_sep - 1:0:-1]:
+        if line == "":
+            return premise_lines
+        else:
+            premise = ""
+            if re.search("=", line) and not re.search("\(", line):
+                # Subj x1 = x2, Acc ?3353 = x1
+                premise= line
+            if re.search("\s_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*$", line):
+                # _pred x0
+                premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*)$", line).group(1)
+            if re.search("\s_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
+                # _pred x0 x1
+                premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
+            if re.search("\s_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
+                # _pred (Subj x0)
+                premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
+            if re.search("\s_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
+                # _pred x (Subj x0)
+                premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
+            if premise != "":
+                #print("premise:{0}".format(premise), file=sys.stderr)
+                premise_lines.append(premise)
+    return premise_lines
+
+def get_conclusion_lines_ex(coq_output_lines):
+    conclusion_lines = []
+    line_index_last_conclusion_sep = find_final_conclusion_sep_line_index(coq_output_lines)
+    if not line_index_last_conclusion_sep:
+        return None
+    #print(coq_output_lines[line_index_last_conclusion_sep+1:])
+    for line in coq_output_lines[line_index_last_conclusion_sep+1:]:
+        if re.search('Toplevel', line):
+            return conclusion_lines
+        elif line == '':
+            continue
+        elif re.search("No more subgoals", line):
+            conclusion_lines.append(line)
+        elif re.search("subgoal", line):
+            continue
+        elif re.search('repeat nltac_base', line):
+            return conclusion_lines
+        else:
+            conclusion = ""
+            if re.search("=", line) and not re.search("\(", line):
+                # Subj x1 = x2, Acc ?3353 = x1
+                conclusion = line
+            if re.search("False", line):
+                # False
+                conclusion = "False"
+            if re.search("_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*$", line):
+                # _pred(_1) x0
+                conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*)$", line).group(1)
+            if re.search("_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*$", line):
+                # _pred x0 x1
+                conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s[xz\?][0-9]*)", line).group(1)
+            if re.search("_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
+                # _pred (Subj x0)
+                conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
+            if re.search("_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s\([a-zA-Z]*\s[xz\?][0-9]*\)", line):
+                # _pred x (Subj x0)
+                conclusion = re.search("(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*\s\([a-zA-Z]*\s[xz\?][0-9]*\))", line).group(1)
+            if conclusion != "":
+                #print("conclusion:{0}".format(conclusion), file=sys.stderr)
+                conclusion_lines.append(conclusion)
+    return conclusion_lines
+
 def TryPhraseAbduction(coq_scripts):
     assert len(coq_scripts) == 2
     direct_proof_script = coq_scripts[0]
@@ -82,9 +155,9 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
                     for line in process.stdout.readlines()]
     if is_theorem_almost_defined(output_lines):
         return expected, [new_coq_script], previous_axioms
-    premise_lines = get_premise_lines(output_lines)
+    premise_lines = get_premise_lines_ex(output_lines)
     #for phrase extraction, check all relations between premise_lines and conclusions
-    conclusions = get_conclusion_lines(output_lines)
+    conclusions = get_conclusion_lines_ex(output_lines)
     if not premise_lines or not conclusions:
         failure_log = {"type error": has_type_error(output_lines),
                        "open formula": has_open_formula(output_lines)}
@@ -106,22 +179,12 @@ def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='y
     #check premises and sub-goals, search for their relations from sqlite, select axioms
     axioms = set()
     
-    #check sub-goals with normal variables
-    conclusions_normal = distinguish_normal_conclusions(conclusions)
-
-    #if existential variables contain in sub-goals, create axioms for sub-goals with existential variables at first
-    axioms = make_phrases_from_premises_and_conclusions_ex(premises, conclusions)
-
-    for conclusion in conclusions_normal:
-        matching_premises, conclusion = get_premises_that_partially_match_conclusion_args(premises, conclusion)
-        premise_preds = [premise.split()[2] for premise in matching_premises]
-        pred_args = get_predicate_case_arguments(matching_premises, conclusion)
+    for conclusion in conclusions:
         axioms.update(make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion, pred_args, expected))
         if not axioms:
             failure_log = make_failure_log(
                 conclusion, premise_preds, conclusion, premises, coq_output_lines)
             print(json.dumps(failure_log), file=sys.stderr)
-    #select best axioms here
     return axioms
 
 def make_phrase_axioms_from_premises_and_conclusions(premise_preds, conclusion_pred, pred_args, expected):
@@ -154,8 +217,6 @@ def get_conclusion_lines(coq_output_lines):
     return conclusion_lines
 
 def get_phrases(premise_preds, conclusion_pred, pred_args, expected):
-    #evaluate phrase candidates based on multiple similarities: surface, external knowledge, argument matching
-    #in some cases, considering argument matching only is better
     axiom, axioms = "", []
     kinds, dist = [], []
     copyflg = 0
@@ -165,105 +226,66 @@ def get_phrases(premise_preds, conclusion_pred, pred_args, expected):
         return list(set(axioms))
     conclusion_pred = conclusion_pred.split()[0]
     trg_pred = denormalize_token(conclusion_pred)
-    for src_pred in src_preds:
-        if src_pred == trg_pred:
-            #the same premise can be found(copy)
-            copyflg = 1
-            break
-        nor_src_pred = normalize_token(src_pred)
-        allarg_list = list(set(pred_args[conclusion_pred] + pred_args[nor_src_pred]))
-        allarg_list = check_case_from_list(allarg_list)
-        allarg = " ".join(allarg_list)
-        #dbflg, kind = search_axioms_from_db(src_pred, trg_pred, pred_args[conclusion_pred], pred_args[nor_src_pred], allarg)
-        #to do: select best axiom from premises(or make phrasal axiom coq_script)
-        #if dbflg:
-        #    kinds.append(kind)
-        #else:
-        #    continue
-        wordnetsim = calc_wordnetsim(src_pred, trg_pred)
-        ngramsim = calc_ngramsim(src_pred, trg_pred)
-        argumentsim = calc_argumentsim(src_pred, trg_pred, pred_args)
-        dist.append(distance.cityblock([1, 1, 1], [wordnetsim, ngramsim, argumentsim]))
+    axioms = search_axioms_from_db(src_preds, trg_pred, pred_args[conclusion_pred], pred_args)
 
-    if copyflg == 1:
-        axiom = 'Axiom ax_copy_{0} : forall x, _{0} x.'\
-        .format(trg_pred)
-        axioms.append(axiom)
-        return list(set(axioms))
-
-    mindist = dist.index(min(dist))
-    best_kind = "phrase" #temporarily, kinds[mindist]
-
-    best_src_pred = src_preds[mindist]
-    best_src_pred_norm = normalize_token(best_src_pred)
-    best_src_pred_arg_list = pred_args[best_src_pred_norm]
-    best_src_pred_arg = " ".join(best_src_pred_arg_list)
-
-    trg_pred_norm = normalize_token(trg_pred)
-    trg_pred_arg_list = pred_args[trg_pred_norm]
-    trg_pred_arg = " ".join(trg_pred_arg_list)
-        
-    total_arg_list = list(set(best_src_pred_arg_list + trg_pred_arg_list))
-    total_arg_list = check_case_from_list(total_arg_list)
-    total_arg = " ".join(total_arg_list)
-        
-    axiom = 'Axiom ax_{0}{1}{2} : forall {3}, {1} {4} -> {2} {5}.'\
-            .format(best_kind, best_src_pred_norm, trg_pred_norm, total_arg, best_src_pred_arg, trg_pred_arg)
-    # to do: consider how to inject antonym axioms
-    axioms.append(axiom)
     print("premise_pred:{0}, conclusion_pred:{1}, pred_args:{2}, axiom:{3}".format(premise_preds, conclusion_pred, pred_args, axioms), file=sys.stderr)
-
     return list(set(axioms))
 
-def search_axioms_from_db(src_pred, trg_pred, sub_arg_list, prem_arg_list, allarg):
+def search_axioms_from_db(src_preds, trg_pred, sub_arg_list, pred_args):
     import sqlite3
-    coq_axiom, db_kind = "", ""
-    sub_arg = " ".join(sub_arg_list)
-    prem_arg = " ".join(prem_arg_list)
+    axiom = ""
+    candidates = defaultdict(list)
     con = sqlite3.connect('./sick_phrase.sqlite3')
     cur = con.cursor()
-    #1. search for premise-subgoal relations from sqlite
-    df = pd.io.sql.read_sql_query('select * from {table} where premise = \"{src_pred}\" and subgoal = \"{trg_pred}\"'\
-        .format(table='axioms', trg_pred=trg_pred, src_pred=src_pred), con)
-    
-    #select axioms from argument information if there are multiple candidate axioms in database.
-    #But there are many duplicates in database for now. 
-    #consider argument match, relatedness score from external knowledge
-    if not df.empty:
-        db_premise = df.loc[0, ["premise"]].values[0]
-        db_subgoal = df.loc[0, ["subgoal"]].values[0]
-        db_prem_arg = df.loc[0, ["prem_arg"]].values[0]
-        db_sub_arg = df.loc[0, ["sub_arg"]].values[0]
-        db_kind = df.loc[0, ["kind"]].values[0]
-        db_allarg = df.loc[0, ["allarg"]].values[0]
-        coq_axiom = "Axiom ax_{0}_{1}_{2} : forall {3}, _{1} {4} -> _{2} {5}.".format(
-                        db_kind,
-                        db_premise,
-                        db_subgoal,
-                        allarg,
-                        prem_arg,
-                        sub_arg)
-    else:
-        #2. if no record is found, search for subgoal-premise relations from sqlite again
-        df2 = pd.io.sql.read_sql_query('select * from {table} where premise = \"{trg_pred}\" and subgoal = \"{src_pred}\"'\
-             .format(table='axioms', trg_pred=trg_pred, src_pred=src_pred), con)
-        if not df2.empty:
-            db_subgoal = df2.loc[0, ["premise"]].values[0]
-            db_premise = df2.loc[0, ["subgoal"]].values[0]
-            db_sub_arg = df2.loc[0, ["prem_arg"]].values[0]
-            db_prem_arg = df2.loc[0, ["sub_arg"]].values[0]
-            db_kind = df2.loc[0, ["kind"]].values[0]
-            db_allarg = df2.loc[0, ["allarg"]].values[0]
-            coq_axiom = "Axiom ax_{0}_{1}_{2} : forall {3}, _{1} {4} -> _{2} {5}.".format(
-                            db_kind,
-                            db_premise,
-                            db_subgoal,
-                            allarg,
-                            prem_arg,
-                            sub_arg)
-    print("coq_axioms_from_db: {0}, conc_pred: {1}, prem_pred: {2}, conc_arg: {3}, prem_arg: {4}".format(coq_axiom, trg_pred, src_pred, sub_arg, prem_arg), file=sys.stderr)
+    for src_pred in src_preds:
+        #1. search for premise-subgoal relations from sqlite
+        df = pd.io.sql.read_sql_query('select * from {table} where premise like \"{src_preds}\" and subgoal = \"{trg_pred}\"'\
+            .format(table='axioms', trg_pred=trg_pred, src_pred=src_preds), con)
+        #select axioms from argument information if there are multiple candidate axioms in database.
+        if not df.empty:
+            db_premise = df.loc[0, ["premise"]].values[0]
+            db_subgoal = df.loc[0, ["subgoal"]].values[0]
+            db_prem_arg = df.loc[0, ["prem_arg"]].values[0]
+            db_sub_arg = df.loc[0, ["sub_arg"]].values[0]
+            db_kind = df.loc[0, ["kind"]].values[0]
+            db_allarg = df.loc[0, ["allarg"]].values[0]
+            candidates[db_subgoal].append([db_premise, db_subgoal, db_prem_arg, db_sub_arg, db_kind, db_allarg])
+
+    if candidates:
+        for i, candidate in enumarate(candidates):
+            if i == 0:
+                axiom = 'Axiom ax_phrase_norelation_{0}_{1} : forall {2}, '.format(
+                db_premise,
+                db_subgoal,
+                db_allarg,
+                )
+
+            axiom += candidate[0]+" "+candidate[2]+" -> "
+            if candidate[4] == "antonym" and "Event -> Prop" in check_types(candidate[1], type_lists):
+                #antonym axiom for event predicates
+                axiom = 'Axiom ax_phrase_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F (Subj x) -> F (Subj y)  -> False.'.format(
+                        premise_pred,
+                        p)
+                break
+            elif candidate[4] == "antonym" and "Entity -> Prop" in check_types(candidate[1], type_lists):
+                #antonym axiom for entity->prop predicates
+                axiom = 'Axiom ax_phrase_antonym{0}{1} : forall F x y, {0} x -> {1} y -> F x -> F y  -> False.'.format(
+                        premise_pred,
+                        p)
+                        break
+            elif candidate[4] == "antonym":
+                #antonym axiom for entity predicates
+                axiom = 'Axiom ax_phrase_antonym{0}{1} : forall x, {0} x -> {1} x -> False.'.format(
+                        premise_pred,
+                        p)
+                        break
+        if candidate[4] != "antonym":
+            axiom += db_subgoal+" "+candidate[3]+"."
+
+
+    print("coq_axioms_from_db: {0}, conc_pred: {1}, prem_pred: {2}, conc_arg: {3}, prem_arg: {4}".format(axiom, trg_pred, src_pred, sub_arg, prem_arg), file=sys.stderr)
     con.close()
-    return coq_axiom, db_kind
+    return axiom
 
 
 def check_case_from_list(total_arg_list):
@@ -277,41 +299,18 @@ def check_case_from_list(total_arg_list):
     sorted_new_total_arg_list = list(set(new_total_arg_list))
     return sorted_new_total_arg_list
 
-def calc_wordnetsim(sub_pred, prem_pred):
-    wordnetsim = 0.0
-    word_similarity_list = []
-    wordFromList1 = wn.synsets(sub_pred)
-    wordFromList2 = wn.synsets(prem_pred)
-    for w1 in wordFromList1:
-        for w2 in wordFromList2:
-            if w1.path_similarity(w2) is not None: 
-                word_similarity_list.append(w1.path_similarity(w2))
-    if(word_similarity_list):
-        wordnetsim = max(word_similarity_list)
-    return wordnetsim
 
-def calc_ngramsim(sub_pred, prem_pred):
-    ngramsim = difflib.SequenceMatcher(None, sub_pred, prem_pred).ratio()
-    return ngramsim
 
-def calc_argumentsim(sub_pred, prem_pred, pred_args):
-    sub_pred = normalize_token(sub_pred)
-    prem_pred = normalize_token(prem_pred)
-    if pred_args[sub_pred] == pred_args[prem_pred]:
-        return 1.0
-    elif pred_args[sub_pred] in pred_args[prem_pred]:
-        #ex. sub_goal: play x0, premise: with x0 x1
-        return 0.5
-    else:
-        return 0.0
 
 
 def is_theorem_almost_defined(output_lines):
     #check if all content subgoals are deleted(remaining relation subgoals can be permitted)
     #ignore relaional subgoals(False, Acc x0=x1) in the proof
-    conclusions = get_conclusion_lines(output_lines)
+    conclusions = get_conclusion_lines_ex(output_lines)
     print("conclusion:{0}".format(conclusions), file=sys.stderr)
     subgoalflg = 0
+    if conclusions is None:
+        return False
     if len(conclusions) > 0:
         for conclusion in conclusions:
             if not "=" in conclusion:
@@ -322,35 +321,6 @@ def is_theorem_almost_defined(output_lines):
         return False
     else:
         return True
-
-def get_premises_that_partially_match_conclusion_args(premises, conclusion):
-    """
-    Returns premises where the predicates have at least one argument
-    in common with the conclusion.
-    In this function, premises containing False are excluded temporarily. For example,
-    H0 : forall x : Entity,
-       ((_man x /\ (exists e : Event, (_drawing e /\ Subj e = x) /\ True)) /\
-        True) /\ (exists e : Event, Subj e = Subj e /\ True) -> False
-    to do: how to exclude such an premise perfectly
-    """
-    candidate_premises = []
-    conclusion = re.sub(r'\?([0-9]+)', r'x\1', conclusion)
-    conclusion_args = get_tree_pred_args(conclusion, is_conclusion=True)
-    if conclusion_args is None:
-        return candidate_premises, conclusion
-    for premise_line in premises:
-        # Convert anonymous variables of the form ?345 into ?x345.
-        premise_line = re.sub(r'\?([0-9]+)', r'x\1', premise_line)
-        premise_args = get_tree_pred_args(premise_line)
-        #print('Conclusion args: ' + str(conclusion_args) +
-        #              '\nPremise args: ' + str(premise_args), file=sys.stderr)
-        #if tree_contains(premise_args, conclusion_args):
-        if premise_args is None or "exists" in premise_line or "=" in premise_line or "forall" in premise_line or "/\\" in premise_line:
-            # ignore relation premises temporarily
-            continue
-        else:
-            candidate_premises.append(premise_line)
-    return candidate_premises, conclusion
 
 def get_tree_pred_args_ex(line, is_conclusion=False):
     """
@@ -403,7 +373,7 @@ def get_pred_from_coq_line(line, is_conclusion=False):
     if is_conclusion:
         return line.split()[0]
     else:
-        return line.split()[2]
+        return line.split()[0]
     raise(ValueError("Strange coq line: {0}".format(line)))
 
 def check_decomposed(line):
@@ -415,152 +385,3 @@ def check_decomposed(line):
         return False
     return True
 
-def make_phrases_from_premises_and_conclusions_ex(premises, conclusions):
-    covered_conclusions = set()
-    axioms = set()
-    phrase_pairs = []
-    premises = [p for p in premises if get_pred_from_coq_line(p).startswith('_') and check_decomposed(p)]
-
-    p_pred_args = {}
-    for p in premises:
-        predicate = get_pred_from_coq_line(p, is_conclusion=False)
-        args = get_tree_pred_args_ex(p, is_conclusion=False)
-        if args is not None:
-            p_pred_args[predicate] = args
-
-    c_pred_args = defaultdict(list)
-    for c in conclusions:
-        predicate = get_pred_from_coq_line(c, is_conclusion=True)
-        args = get_tree_pred_args_ex(c, is_conclusion=True)
-        if args is not None:
-            c_pred_args[predicate].append(args) # List of lists of args.
-
-    # Compute relations between arguments as frozensets.
-    c_args_preds = defaultdict(set)
-    for pred, args_list in c_pred_args.items():
-        for args in args_list:
-            for arg in args:
-                c_args_preds[frozenset([arg])].add(pred)
-            c_args_preds[frozenset(args)].add(pred)
-    # from pudb import set_trace; set_trace()
-    for args, preds in sorted(c_args_preds.items(), key=lambda x: len(x[0])):
-        for targs, _ in sorted(c_args_preds.items(), key=lambda x: len(x[0])):
-            # if args.intersection(targs):
-            # E.g. if args is {'?4844'} and targs is {'(Acc ?4844)', 'x1'},
-            # then we merge the predicates associated to these arguments.
-            if any(a in ta for a in args for ta in targs):
-                c_args_preds[targs].update(preds)
-
-    #create axioms about sub-goals with existential variables containing case information
-    case_c_preds = [c for c, c_args in c_pred_args.items() if re.search("\?", str(c_args)) and contains_case(str(c_args)) and len(c_args[0]) == 1]
-    for case_c_pred in case_c_preds:
-        case_c_arg = c_pred_args[case_c_pred][0][0]
-        case_c_arg = re.sub(r'\?([0-9]+)', r'x\1', case_c_arg)
-        case = re.search(r'([A-Z][a-z][a-z][a-z]?)', case_c_arg).group(1)
-        pat = re.compile(case)
-        for p_pred, p_args in p_pred_args.items():
-            if re.search(pat, p_args[0]):
-                #create axioms with premises which have the same case 
-                axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
-                        p_pred,
-                        case_c_pred,
-                        "x0",
-                        "y0")
-                axioms.add(axiom)
-                #covered_conclusions.add(p)
-
-
-    #create axioms about sub-goals without case information
-    exclude_preds_in_conclusion = {
-        get_pred_from_coq_line(l, is_conclusion=True) \
-            for l in conclusions if not l.startswith('_') and contains_case(l)}
-
-    for args, c_preds in sorted(c_args_preds.items(), key=lambda x: len(x[0]), reverse=True):
-        c_preds = sorted([
-            p for p in c_preds if p.startswith('_') and p not in exclude_preds_in_conclusion])
-        print("c_args_preds:{0}, p_pred_args:{1}".format(c_args_preds, p_pred_args))
-        if len(args) > 0: #ask Pascual-sensei why len(args) > 1
-            premise_preds = [
-                p for p, p_args in p_pred_args.items() if set(p_args).issubset(args)]
-            premise_preds = sorted([p for p in premise_preds if not contains_case(p)])
-            if premise_preds:
-                phrase_pairs.append((premise_preds, c_preds)) # Saved phrase pairs for Yanaka-san.
-                for premise_pred in premise_preds:
-                #premise_pred = premise_preds[0] #not only the first premise, but all premises are selected
-                    for p in c_preds:
-                        #if p not in covered_conclusions:
-                        c_num_args = max(len(cargs) for cargs in c_pred_args[p])
-                        p_num_args = len(p_pred_args[premise_pred])
-                        axiom = 'Axiom ax_ex_phrase{0}{1} : forall {2} {3}, {0} {2} -> {1} {3}.'.format(
-                            premise_pred,
-                            p,
-                            ' '.join('x' + str(i) for i in range(p_num_args)),
-                            ' '.join('y' + str(i) for i in range(c_num_args)))
-                        axioms.add(axiom)
-                        covered_conclusions.add(p)
-    #print(phrase_pairs) # this is a list of tuples of lists.
-    return axioms
-   
-def distinguish_normal_conclusions(conclusions):
-    conclusions_normal = []
-    for conclusion in conclusions:
-        if re.search("\?", conclusion):
-            #existential variables contain
-            continue
-        else:
-            #normal variables contain
-            conclusions_normal.append(conclusion)
-    return conclusions_normal
-
-def get_predicate_case_arguments(premises, conclusion):
-    """
-    Given the string representations of the premises, where each premises is:
-      pX : predicate1 arg1 arg2 arg3
-    and the conclusion, which is of the form:
-      predicate3 arg2 arg4
-    returns a dictionary where the key is a predicate, and the value
-    is a list of argument names.
-    If the same predicate is found with different arguments, then it is
-    labeled as a conflicting predicate and removed from the output.
-    Conflicting predicates are typically higher-order predicates, such
-    as "Prog".
-    """
-    pred_args = {}
-    pred_trees = []
-    for premise in premises:
-        try:
-            pred_trees.append(
-                Tree.fromstring('(' + ' '.join(premise.split()[2:]) + ')'))
-        except ValueError:
-            continue
-    try:
-        conclusion_tree = Tree.fromstring('(' + conclusion + ')')
-    except ValueError:
-        return pred_args
-    pred_trees.append(conclusion_tree)
-    pred_args_list = []
-    for t in pred_trees:
-        pred = t.label()
-        #if args have case information, extract the pair of case and variables in args
-        #ex. extract Subj x1 as argas in Tree('_lady', [Tree('Subj', ['x1'])])
-        #args = t.leaves()
-        args = []
-        for tt in t:
-            args.append(str(tt))
-        pred_args_list.append([pred] + args)
-    #conflicting_predicates = set()
-    count = {}
-    for pa in pred_args_list:
-        pred = pa[0]
-        args = pa[1:]
-        if pred not in count:
-            count[pred] = 0
-            pred_args[pred] = args
-        if pred in pred_args and pred_args[pred] != args:
-            #conflicting_predicates.add(pred)
-            count[pred] += 1
-            pred_args[pred+"_"+str(count[pred])] = args        
-    #logging.debug('Conflicting predicates: ' + str(conflicting_predicates))
-    #for conf_pred in conflicting_predicates:
-    #    del pred_args[conf_pred]
-    return pred_args
