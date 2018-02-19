@@ -62,7 +62,7 @@ def get_premise_lines_ex(coq_output_lines):
             premise = ""
             if re.search("=", line) and not re.search("\(", line):
                 # Subj x1 = x2, Acc ?3353 = x1
-                premise= line
+                premise= line.split(":")[1]
             if re.search("\s_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*$", line):
                 # _pred x0
                 premise = re.search("\s(_[a-zA-Z]*_?[1-9]?\s[xz\?][0-9]*)$", line).group(1)

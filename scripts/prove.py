@@ -63,10 +63,10 @@ def main(args = None):
         from abduction_naive import AxiomsWordnet
         abduction = AxiomsWordnet()
     elif args.abduction == "phrase":
-        from abduction_phrase import AxiomsPhrase
+        from abduction_phrase_new import AxiomsPhrase
         abduction = AxiomsPhrase()
     elif args.abduction == "phrase_eval":
-        from abduction_phrase_eval import AxiomsPhraseEval
+        from abduction_phrase_eval_new import AxiomsPhraseEval
         #from abduction_phrase_eval_siamese import AxiomsPhraseEval
         abduction = AxiomsPhraseEval()
     elif args.abduction == "subgoal":
