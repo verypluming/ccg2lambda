@@ -118,7 +118,7 @@ def get_conclusion_lines_ex(coq_output_lines):
     return conclusion_lines
 
 def TryPhraseAbduction(coq_scripts):
-    assert len(coq_scripts) == 2
+    #assert len(coq_scripts) == 2
     direct_proof_script = coq_scripts[0]
     reverse_proof_script = coq_scripts[1]
     axioms = set()
