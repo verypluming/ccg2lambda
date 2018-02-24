@@ -21,7 +21,7 @@ for axiom in axioms:
         subgoals.append(subgoal)
     else:
         if len(subgoals) > 0:
-            h.write(name+"|"+sentences[0].strip()+"|"+sentences[1].strip()+"|"+label.strip()+"|"+"-".join(premises)+"|"+"-".join(subgoals)+"\n")
+            h.write(oldname+"|"+sentences[0].strip()+"|"+sentences[1].strip()+"|"+label.strip()+"|"+"-".join(oldpremises)+"|"+"-".join(subgoals)+"\n")
         oldname = name
         subgoals = []
         subgoals.append(subgoal)
