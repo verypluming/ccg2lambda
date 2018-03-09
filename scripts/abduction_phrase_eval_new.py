@@ -34,6 +34,8 @@ from semantic_tools import is_theorem_defined
 from tactics import get_tactics
 from tree_tools import is_string
 import pandas as pd
+from lxml import etree
+
 
 class AxiomsPhraseEval(object):
     """
@@ -43,9 +45,9 @@ class AxiomsPhraseEval(object):
         pass
 
     def attempt(self, coq_scripts, doc, context=None):
-        return TryPhraseAbduction(coq_scripts)
+        return TryPhraseAbduction(coq_scripts, doc)
 
-def TryPhraseAbduction(coq_scripts):
+def TryPhraseAbduction(coq_scripts, doc):
     #assert len(coq_scripts) == 2
     direct_proof_script = coq_scripts[0]
     reverse_proof_script = coq_scripts[1]
@@ -56,13 +58,13 @@ def TryPhraseAbduction(coq_scripts):
         #entailment proof
         inference_result_str, direct_proof_scripts, new_direct_axioms = \
             try_phrase_abduction(direct_proof_script,
-                        previous_axioms=axioms, expected='yes')
+                        previous_axioms=axioms, expected='yes', doc=doc)
         current_axioms = axioms.union(new_direct_axioms)
         if inference_result_str == 'unknown':
             #contradiction proof
             inference_result_str, reverse_proof_scripts, new_reverse_axioms = \
                 try_phrase_abduction(reverse_proof_script,
-                              previous_axioms=axioms, expected='no')
+                              previous_axioms=axioms, expected='no', doc=doc)
             current_axioms = axioms.union(new_reverse_axioms)
         all_scripts = direct_proof_scripts + reverse_proof_scripts
         if len(axioms) == len(current_axioms) or inference_result_str != 'unknown':
@@ -70,7 +72,7 @@ def TryPhraseAbduction(coq_scripts):
         axioms = current_axioms
     return inference_result_str, all_scripts
     
-def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
+def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes', doc=None):
     new_coq_script = insert_axioms_in_coq_script(previous_axioms, coq_script)
     current_tactics = get_tactics()
     #debug_tactics = 'repeat nltac_base. try substitution. Qed'
@@ -91,7 +93,7 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
                        "open formula": has_open_formula(output_lines)}
         print(json.dumps(failure_log), file=sys.stderr)
         return 'unknown', [], previous_axioms
-    axioms = make_phrase_axioms(premise_lines, conclusions, output_lines, expected, coq_script_debug)
+    axioms = make_phrase_axioms(premise_lines, conclusions, output_lines, expected, coq_script_debug, doc)
     #axioms = filter_wrong_axioms(axioms, coq_script) temporarily
     #add only newly generated axioms
     axioms = axioms.union(previous_axioms)
@@ -105,11 +107,11 @@ def try_phrase_abduction(coq_script, previous_axioms=set(), expected='yes'):
     inference_result_str = expected if is_theorem_almost_defined(output_lines) else 'unknown'
     return inference_result_str, [new_coq_script], axioms
 
-def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None):
+def make_phrase_axioms(premises, conclusions, coq_output_lines=None, expected='yes', coq_script_debug=None, doc=None):
     #check premises and sub-goals, search for their relations from sqlite, select axioms
     axioms = set()
     axiom_candidates = make_phrases_from_premises_and_conclusions_ex(premises, conclusions, coq_script_debug, expected)
-    axioms = search_axioms_from_db(axiom_candidates)
+    axioms = search_axioms_from_db(axiom_candidates, doc)
     return axioms
 
 
@@ -136,12 +138,14 @@ def get_conclusion_lines(coq_output_lines):
             conclusion_lines.append(line)
     return conclusion_lines
 
-def search_axioms_from_db(axiom_candidates):
+def search_axioms_from_db(axiom_candidates, doc):
     import sqlite3
     axioms = []
     con = sqlite3.connect('./sick_phrase.sqlite3')
     cur = con.cursor()
     phrases = []
+    
+
     premises_axioms = defaultdict(list)
     for axiom_candidate in axiom_candidates:
         axiomname = axiom_candidate.split(" ")[1]
@@ -152,6 +156,10 @@ def search_axioms_from_db(axiom_candidates):
     for phrase in phrases:
         premises, subgoal = phrase[0], phrase[1]
         for premise in premises:
+            pos1 = doc.xpath('//token[@base="%s" and contains(@id, "t0")]/@pos' % premise)
+            if "IN" in pos1 or "CD" in pos1:
+                #if the pos tag of the target premise is preposition(IN) or cardinal number(CD), skip it
+                continue 
             #1. search for premise-subgoal relations from sqlite
             df = pd.io.sql.read_sql_query('select * from {table} where premise like \"%{premise}%\" and subgoal = \"{subgoal}\"'\
                 .format(table='axioms', premise=premise, subgoal=subgoal), con)
