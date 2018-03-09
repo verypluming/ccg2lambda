@@ -29,6 +29,7 @@ from nltk.corpus import wordnet as wn
 from collections import *
 import urllib.parse
 import unicodedata
+import sys
 
 def build_knowledge_axioms(doc):
     if not doc:
@@ -66,6 +67,7 @@ def prove_doc(doc, abduction=None, similarity=None):
     """
     coq_scripts = []
     coq_scripts2 = []
+
     formulas = get_formulas_from_doc(doc)
     if not formulas:
         return 'unknown', coq_scripts
@@ -110,7 +112,7 @@ def prove_doc(doc, abduction=None, similarity=None):
                 word_similarity1 = 1
             else:
                 ## try abductions
-                inference_result_str, abduction_scripts = try_sim_abductions(coq_scripts)
+                inference_result_str, abduction_scripts = try_sim_abductions(coq_scripts, doc)
                 coq_scripts.extend(abduction_scripts)
                 if inference_result_str == 'yes':
                     inference_result_int1 = 1
@@ -162,7 +164,7 @@ def prove_doc(doc, abduction=None, similarity=None):
                 word_similarity2 = 1
             else:
                 ## try abductions
-                inference_result_str, abduction_scripts = try_sim_abductions(coq_scripts2)
+                inference_result_str, abduction_scripts = try_sim_abductions(coq_scripts2, doc)
                 coq_scripts.extend(abduction_scripts)
                 coq_scripts2.extend(abduction_scripts)
                 if inference_result_str == 'yes':
@@ -320,7 +322,17 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
     coq_lines = coq_scripts[-1].split("\n")
     for coq_line in coq_lines:
         if re.search("Hint", coq_line):
-            if re.search("approx", coq_line) or re.search("ax_phrase", coq_line):
+            if re.search("phrase", coq_line):
+                #phrase
+                word_lines = coq_line.split("_")
+                word1s = word_lines[len(word_lines)-2:2:-1]
+                if re.search("(.*)\.", word_lines[-1]):
+                    word2 = word_lines[-1].rstrip(".")
+                else:
+                    word2 = word_lines[-1]
+                for word1 in word1s:
+                    merge_axioms[word1].append("w2v "+word2)
+            elif re.search("approx", coq_line):
                 #word2vec
                 word_lines = coq_line.split("_")
                 word1 = word_lines[2]
@@ -361,11 +373,17 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 'curl http://localhost:5000/word2vec/similarity?w1='+ pr +'\&w2='+ word, \
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 pre_similarity = process.communicate()[0]
-                pre_similarities.append(float(pre_similarity.decode()))
+                try:
+                    pre_similarities.append(float(pre_similarity.decode()))
+                except:
+                    pre_similarities.append(0)
+                    continue
             elif dic == "wn":
                 pre_similarity = wordnet_similarity(pr, word)
                 pre_similarities.append(pre_similarity)
-        word_similarity += max(pre_similarities)
+        #word_similarity += max(pre_similarities)
+        #In considering phrase, calculate average.(to do: consider which is better, maximum or average)
+        word_similarity += float(sum(pre_similarities)/len(pre_similarities))
         axioms += 1
     if axioms > 0:
         word_similarity = word_similarity/axioms
