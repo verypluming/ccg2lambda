@@ -200,21 +200,21 @@ def get_features(line):
         float(line[52]), # add proportion of original/final subgoals B->A
         float(line[53]),
         float(feature_extraction.get_overlap(sentence1_list, sentence2_list)),                 #36 word overlap
-        float(feature_extraction.sentence_lengths(sentence1_list, sentence2_list)),            #37 sentence length
+        #float(feature_extraction.sentence_lengths(sentence1_list, sentence2_list)),            #37 sentence length
         float(difflib.SequenceMatcher(None, line[2], line[3]).ratio()),                        #38 string similarity
         float(feature_extraction.word_overlap2(sentence1_list, sentence2_list)),               #39 Proportion of word overlap
-        float(feature_extraction.sentence_lengths_difference(sentence1_list, sentence2_list)), #40 Proportion of difference in sentence length
-        float(feature_extraction.synset_overlap(sentence1_list, sentence2_list)),              #41 Proportion of synset lemma overlap
-        float(feature_extraction.synset_distance(sentence1_list, sentence2_list)),             #42 Synset distance
+        #float(feature_extraction.sentence_lengths_difference(sentence1_list, sentence2_list)), #40 Proportion of difference in sentence length
+        #float(feature_extraction.synset_overlap(sentence1_list, sentence2_list)),              #41 Proportion of synset lemma overlap
+        #float(feature_extraction.synset_distance(sentence1_list, sentence2_list)),             #42 Synset distance
         float(feature_extraction.type_overlap(line[0])),                                       #43 type overlap
         float(feature_extraction.pos_overlap(line[0])),                                        #44 pos-tag overlap
         float(feature_extraction.noun_overlap(line[0])),                                       #45 Proportion of noun overlap
         float(feature_extraction.verb_overlap(line[0])),                                       #46 Proportion of verb overlap
-        float(feature_extraction.pred_overlap(line[0])),                                       #47 Proportion of predicate overlap
+        #float(feature_extraction.pred_overlap(line[0])),                                       #47 Proportion of predicate overlap
         float(feature_extraction.tfidf(line[0])),                                              #48 tfidf
         float(feature_extraction.lsi(line[0])),                                                #49 LSI
         float(feature_extraction.lda(line[0])),                                                #50 LDA
-        float(line[38]),                                                                       #51 tree-mapping features
+        #float(line[38]),                                                                       #51 tree-mapping features
         float(feature_extraction.passive_overlap(line[0])),                                    #52 passive overlap 2017/02/14
         float(feature_extraction.negation_overlap(line[0])),                                   #53 negation overlap 2017/02/14
     ]   
@@ -383,8 +383,13 @@ def main():
     parser.add_argument("--results", default="results")
     args = parser.parse_args()
     # Load sick data
-    #train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id  = retrieve_features(1, sick_train, sick_test, args.results)
-    train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(None, None, None, args.results)
+    sick_train, sick_test = load_sick_data(args.results)
+    random.seed(23)
+    random.shuffle(sick_train)
+    random.shuffle(sick_test)
+    print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
+    train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id  = retrieve_features(1, sick_train, sick_test, args.results)
+    #train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(None, None, None, args.results)
     #print('train_sources:{0}, train_targets:{1}, trial_sources:{2}, trial_targets:{3}'.format(train_sources, train_targets, trial_sources, trial_targets))
 
     # Train the regressor

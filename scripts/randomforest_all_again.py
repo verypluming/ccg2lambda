@@ -116,21 +116,21 @@ def get_features(line):
         float(line[12]),                    #12 original subgoal A->B
         float(line[13]),                    #13 original subgoal B->A
         float(line[14]),                    #14 step A->B
-        float(line[15])/float(line[14]),    #15-21 inference rule A->B 
-        float(line[16])/float(line[14]),
-        float(line[17])/float(line[14]),
-        float(line[18])/float(line[14]),
-        float(line[19])/float(line[14]),
-        float(line[20])/float(line[14]),
-        float(line[21])/float(line[14]),
+        #float(line[15])/float(line[14]),    #15-21 inference rule A->B 
+        #float(line[16])/float(line[14]),
+        #float(line[17])/float(line[14]),
+        #float(line[18])/float(line[14]),
+        #float(line[19])/float(line[14]),
+        #float(line[20])/float(line[14]),
+        #float(line[21])/float(line[14]),
         float(line[22]),                    #22 step B->A
-        float(line[23])/float(line[22]),    #23-29 inference rule B->A 
-        float(line[24])/float(line[22]),
-        float(line[25])/float(line[22]),
-        float(line[26])/float(line[22]),
-        float(line[27])/float(line[22]),
-        float(line[28])/float(line[22]),
-        float(line[29])/float(line[22]),
+        #float(line[23])/float(line[22]),    #23-29 inference rule B->A 
+        #float(line[24])/float(line[22]),
+        #float(line[25])/float(line[22]),
+        #float(line[26])/float(line[22]),
+        #float(line[27])/float(line[22]),
+        #float(line[28])/float(line[22]),
+        #float(line[29])/float(line[22]),
         float(line[30]),                    #30-35 subgoal case A->B, B->A #30-35
         float(line[31]),
         float(line[32]),
@@ -172,7 +172,7 @@ def get_features(line):
         float(feature_extraction.lda(line[0])),                                                #50 LDA
         float(line[38]),                                                                       #51 tree-mapping features
         float(feature_extraction.passive_overlap(line[0])),                                    #52 passive overlap 2017/02/14
-        float(feature_extraction.negation_overlap(line[0])),                                   #53 negation overlap 2017/02/14
+        #float(feature_extraction.negation_overlap(line[0])),                                   #53 negation overlap 2017/02/14
     ]   
     return features
 
