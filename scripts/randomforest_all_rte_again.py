@@ -340,13 +340,13 @@ def load_sick_data(results):
     """
     sick_train, sick_test = [], []
     for line in open('./en/SICK.semeval.txt'):
-        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[11].strip() == 'TRAIN':
+        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TRAIN':
             if load_sick_data_from(line.split('\t')[0], 'TRAIN', results) is not None:
                 sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRAIN', results))
-        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[11].strip() == 'TRIAL':
+        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TRIAL':
             if load_sick_data_from(line.split('\t')[0], 'TRIAL', results) is not None:
                 sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRIAL', results))
-        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[11].strip() == 'TEST':
+        if line.split('\t')[0] != 'pair_ID' and line.split('\t')[-1].strip() == 'TEST':
             if load_sick_data_from(line.split('\t')[0], 'TEST', results) is not None:
                 sick_test.append(load_sick_data_from(line.split('\t')[0], 'TEST', results))
             #if len(sick_data) == 100:
