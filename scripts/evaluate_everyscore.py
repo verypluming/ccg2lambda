@@ -19,7 +19,7 @@ import numpy as np
 
 from lxml import etree
 from sklearn.externals import joblib
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import re
 from scipy.stats import pearsonr, spearmanr
 from sklearn.ensemble import RandomForestRegressor

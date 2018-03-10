@@ -201,7 +201,7 @@ def retrieve_features(train, trial, recalc=None, sick_train=None, sick_test=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./results_20170921_WN/all/features_np_again.pickle', 'rb') as in_f:
+        with open('./sick_results/all/features_np_again.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             if len(train) == 1:
                 nums = train[0].split(":")
@@ -313,8 +313,8 @@ def load_sick_data_from(sick_id, kind):
     line.append(texts[0].strip())
     line.append(texts[1].strip())
     g.close()
-    if os.path.exists('./results_20170921_WN/sick_'+kind.lower()+'_'+sick_id+'.answer'):
-        h = open('./results_20170921_WN/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
+    if os.path.exists('./sick_results/sick_'+kind.lower()+'_'+sick_id+'.answer'):
+        h = open('./sick_results/sick_'+kind.lower()+'_'+sick_id+'.answer', 'r')
         result = h.readlines()
         if result and not re.search("coq_error", result[0]) and not "unknown\n" in result:
             results = result[0].split(",")

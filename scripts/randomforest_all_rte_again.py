@@ -339,7 +339,7 @@ def load_sick_data(results):
     otherwise fall back to txt.
     """
     sick_train, sick_test = [], []
-    for line in open('./en/data/sick/SICK.semeval.txt'):
+    for line in open('./en/SICK.semeval.txt'):
         if line.split('\t')[0] != 'pair_ID' and line.split('\t')[11].strip() == 'TRAIN':
             if load_sick_data_from(line.split('\t')[0], 'TRAIN', results) is not None:
                 sick_train.append(load_sick_data_from(line.split('\t')[0], 'TRAIN', results))
