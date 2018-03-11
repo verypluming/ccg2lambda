@@ -237,7 +237,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
         trial_id = np.array([line[0] for line in sick_test])
 
         # Store to pickle for future reference
-        with open('./'+results+'/all/features_np.pickle', 'wb') as out_f:
+        with open('./'+results+'/all/features_np_rte.pickle', 'wb') as out_f:
             np.save(out_f, train_sources)
             np.save(out_f, train_targets)
             np.save(out_f, trial_sources)
@@ -245,7 +245,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./'+results+'/all/features_np_again.pickle', 'rb') as in_f:
+        with open('./'+results+'/all/features_np_rte.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             #train_sources = np.hstack((train_sources[:, 0:15], train_sources[:, 22:23], train_sources[:, 30:54]))
             #train_sources = train_sources[:, 6:54]
@@ -321,7 +321,7 @@ def load_sick_data_from(sick_id, kind, results):
     line.append(texts[1].strip())
     i.close()
 
-    j = open('./sick_feats/sick.mapping_costs.txt')
+    j = open('./en/models/sick.mapping_costs_new.txt')
     scores = j.readlines()
     for score in scores:
         if re.search('^plain/sick_'+kind.lower()+'_'+sick_id+'.txt', score):

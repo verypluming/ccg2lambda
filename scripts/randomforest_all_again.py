@@ -194,7 +194,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
         trial_id = np.array([line[0] for line in sick_test])
 
         # Store to pickle for future reference
-        with open('./'+results+'/all/features_np.pickle', 'wb') as out_f:
+        with open('./'+results+'/all/features_np_sts.pickle', 'wb') as out_f:
             np.save(out_f, train_sources)
             np.save(out_f, train_targets)
             np.save(out_f, trial_sources)
@@ -202,7 +202,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
             np.save(out_f, train_id)
             np.save(out_f, trial_id)
     else:
-        with open('./'+results+'/all/features_np.pickle', 'rb') as in_f:
+        with open('./'+results+'/all/features_np_sts.pickle', 'rb') as in_f:
             train_sources = np.load(in_f)
             train_targets = np.load(in_f)
             trial_sources = np.load(in_f)
@@ -214,7 +214,7 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
         trial_sources = np.array([get_features(line) for line in sick_test])
         trial_targets = np.array([float(line[1]) for line in sick_test])
         trial_id = np.array([line[0] for line in sick_test])
-        with open('./'+results+'/all/features_np_again.pickle', 'wb') as out_f:
+        with open('./'+results+'/all/features_np_sts.pickle', 'wb') as out_f:
             np.save(out_f, train_sources)
             np.save(out_f, train_targets)
             np.save(out_f, trial_sources)
@@ -389,7 +389,8 @@ def main():
     # Check errors
     output_errors(outputs, trial_targets, [line[0] for line in sick_test], [line[2:4] for line in sick_test], args.results) #Outputs and sick_ids
 
-    x = np.loadtxt(outputs, dtype=np.float32)
+    new_outputs = [float(output) for output in outputs]
+    x = np.loadtxt(new_outputs, dtype=np.float32)
     y = np.loadtxt(trial_targets, dtype=np.float32)
     with open('./'+args.results+'/evaluation.txt', 'w') as eval_f:
         ## pearson correlation
