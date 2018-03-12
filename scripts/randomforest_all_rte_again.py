@@ -321,7 +321,7 @@ def load_sick_data_from(sick_id, kind, results):
     line.append(texts[1].strip())
     i.close()
 
-    j = open('./en/models/sick.mapping_costs_new.txt')
+    j = open('./en/models/sick.mapping_costs.new.txt')
     scores = j.readlines()
     for score in scores:
         if re.search('^plain/sick_'+kind.lower()+'_'+sick_id+'.txt', score):

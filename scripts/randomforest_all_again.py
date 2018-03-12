@@ -389,9 +389,9 @@ def main():
     # Check errors
     output_errors(outputs, trial_targets, [line[0] for line in sick_test], [line[2:4] for line in sick_test], args.results) #Outputs and sick_ids
 
-    new_outputs = [float(output) for output in outputs]
-    x = np.loadtxt(new_outputs, dtype=np.float32)
-    y = np.loadtxt(trial_targets, dtype=np.float32)
+    #new_outputs = [float(output) for output in outputs]
+    x = np.array(outputs, dtype=np.float32)
+    y = np.array(trial_targets, dtype=np.float32)
     with open('./'+args.results+'/evaluation.txt', 'w') as eval_f:
         ## pearson correlation
         r, p = pearsonr(x, y)
