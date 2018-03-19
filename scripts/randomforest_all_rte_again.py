@@ -44,6 +44,7 @@ def regression(X_train, y_train, X_test, y_test, results):
         preprocessing.StandardScaler(),
     #    preprocessing.MinMaxScaler(),
         GridSearchCV(RandomForestClassifier(), parameters))
+    #print(X_train, y_train)
     clf.fit(X_train, y_train)
 
     #Serialize
@@ -225,16 +226,20 @@ def retrieve_features(recalc=None, sick_train=None, sick_test=None, results=None
         # Extract training features and targets
         print ('Feature extraction (train)...')
         train_sources = np.array([get_features(line) for line in sick_train])
-        train_targets = np.array([float(line[1]) for line in sick_train])
+        #train_targets = np.array([float(line[1]) for line in sick_train])
 
         # Extract trial features and targets
         print ('Feature extraction (trial)...')
         trial_sources = np.array([get_features(line) for line in sick_test])
-        trial_targets = np.array([float(line[1]) for line in sick_test])
+        #trial_targets = np.array([float(line[1]) for line in sick_test])
 
         # Save SICK ID
         train_id = np.array([line[0] for line in sick_train])
         trial_id = np.array([line[0] for line in sick_test])
+
+        # RTE gold label
+        train_targets = load_rte(train_id)
+        trial_targets = load_rte(trial_id)
 
         # Store to pickle for future reference
         with open('./'+results+'/all/features_np_rte.pickle', 'wb') as out_f:
@@ -388,8 +393,8 @@ def main():
     random.shuffle(sick_train)
     random.shuffle(sick_test)
     print ('test size: {0}, training size: {1}'.format(len(sick_test), len(sick_train)))
-    train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id  = retrieve_features(1, sick_train, sick_test, args.results)
-    #train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(None, None, None, args.results)
+    #train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id  = retrieve_features(1, sick_train, sick_test, args.results)
+    train_sources, train_targets, trial_sources, trial_targets, train_id, trial_id = retrieve_features(None, None, None, args.results)
     #print('train_sources:{0}, train_targets:{1}, trial_sources:{2}, trial_targets:{3}'.format(train_sources, train_targets, trial_sources, trial_targets))
 
     # Train the regressor
