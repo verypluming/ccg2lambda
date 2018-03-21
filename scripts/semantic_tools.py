@@ -290,7 +290,7 @@ def wordnet_similarity(word1, word2):
         word_similarity = max(word_similarity_list)
     else:
         # cannot path similarity but somehow similar
-        word_similarity = 0.5
+        word_similarity = 0.0
     return word_similarity
 
 def calculate_similarity(coq_scripts, dynamic_library_str):
@@ -349,9 +349,9 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
                 word_lines = coq_line.split("_")
                 word1 = word_lines[2]
                 if not re.match('^[0-9]{1,}$', word_lines[3]):
-                    word2 = word_lines[3].strip()
+                    word2 = word_lines[3].rstrip(".")
                 else:
-                    word2 = word_lines[4].strip()
+                    word2 = word_lines[4]
                 merge_axioms[word1].append("wn "+word2)
         if re.search("Parameter", coq_line):
             #use for skipping subgoals with existential variables
@@ -364,26 +364,32 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
         for a in ax:
             dic = a.split()[0]
             word = a.split()[1]
-            if dic == "w2v":
+            #if dic == "w2v":
+            #calculate wordnet similarity first
+            pre_similarity = wordnet_similarity(pr, word)
+            if pre_similarity == 0.0:
+                #calculate word2vec similarity
                 if unicodedata.category(pr[0]) == "Lo":
                     #if Japanese, do URL encode
                     pr = urllib.parse.quote(pr)
                     word = urllib.parse.quote(word)
                 process = Popen(\
-                'curl http://localhost:5000/word2vec/similarity?w1='+ pr +'\&w2='+ word, \
-                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    'curl http://localhost:5000/word2vec/similarity?w1='+ pr +'\&w2='+ word, \
+                    shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 pre_similarity = process.communicate()[0]
                 try:
                     pre_similarities.append(float(pre_similarity.decode()))
                 except:
-                    pre_similarities.append(0)
+                    pre_similarities.append(0.0)
                     continue
-            elif dic == "wn":
-                pre_similarity = wordnet_similarity(pr, word)
+            else:
                 pre_similarities.append(pre_similarity)
+            #elif dic == "wn":
+            #    pre_similarity = wordnet_similarity(pr, word)
+            #    pre_similarities.append(pre_similarity)
         #word_similarity += max(pre_similarities)
-        #In considering phrase, calculate average.(to do: consider which is better, maximum or average)
-        word_similarity += float(sum(pre_similarities)/len(pre_similarities))
+        #In considering phrase, calculate maximum.(to do: consider which is better, maximum or average)
+        word_similarity += float(max(pre_similarities)/len(pre_similarities))
         axioms += 1
     if axioms > 0:
         word_similarity = word_similarity/axioms
