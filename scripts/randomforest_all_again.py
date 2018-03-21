@@ -20,9 +20,10 @@ import os
 import numpy as np
 import scipy as sp
 from scipy.stats import pearsonr, spearmanr
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, ExtraTreesClassifier, ExtraTreesRegressor
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import mean_squared_error, classification_report
+from deep_forest import MGCForest
 import sys
 #import matplotlib.pyplot as plt
 import random
@@ -65,6 +66,64 @@ def regression(X_train, y_train, X_test, y_test, results):
     #clf = joblib.load('randomforestregressor.pkl')
 
     return clf
+
+def deep_forest(X_train, y_train, X_test, y_test):
+    mgc_forest = MGCForest(
+        estimators_config={
+            'mgs': [{
+                'estimator_class': ExtraTreesRegressor,
+                'estimator_params': {
+                    'n_estimators': 200,
+                    'min_samples_split': 2,
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestRegressor,
+                'estimator_params': {
+                    'n_estimators': 200,
+                    'min_samples_split': 2,
+                    'n_jobs': -1,
+                }
+            }],
+            'cascade': [{
+                'estimator_class': ExtraTreesRegressor,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': ExtraTreesRegressor,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestRegressor,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }, {
+                'estimator_class': RandomForestRegressor,
+                'estimator_params': {
+                    'n_estimators': 1000,
+                    'min_samples_split': 11,
+                    'max_features': 'sqrt',
+                    'n_jobs': -1,
+                }
+            }]
+        },
+        stride_ratios=[1.0 / 4, 1.0 / 9, 1.0 / 16],
+    )
+    mgc_forest.fit(X_train, y_train.astype(np.uint8))
+
+    return mgc_forest
 
 def get_features(line):
     print("sick_id:{0}".format(line[0]))
@@ -377,10 +436,13 @@ def main():
     #train_sources, train_targets, trial_sources, trial_targets = retrieve_features(0, sick_train, sick_test, args.results)
     
     # Train the regressor
-    clf = regression(train_sources, train_targets, trial_sources, trial_targets, args.results)
+    #clf = regression(train_sources, train_targets, trial_sources, trial_targets, args.results)
+    #deep forest
+    clf = deep_forest(np.array(train_sources), np.array(train_targets), np.array(trial_sources), np.array(trial_targets))
 
     # Apply regressor to trial data
-    outputs = clf.predict(trial_sources)
+    #outputs = clf.predict(trial_sources)
+    outputs = clf.predict(np.array(trial_sources))
     trial_targets = np.array([float(line[1]) for line in sick_test])
 
     # Evaluate regressor

@@ -400,7 +400,7 @@ def main():
     # Train the regressor
     clf = regression(train_sources, train_targets, trial_sources, trial_targets, args.results)
     #if using deep forest
-    #clf = deep_forest(train_sources, train_targets, trial_sources, trial_targets)
+    #clf = deep_forest(np.array(train_sources), np.array(train_targets), np.array(trial_sources), np.array(trial_targets))
 
     # Cross validation
     #mean, std = crossvalidation(clf, train_sources, train_targets)
@@ -408,6 +408,7 @@ def main():
 
     # Apply regressor to trial data
     outputs = clf.predict(trial_sources)
+    #outputs = clf.predict(np.array(trial_sources))
     trial_targets = list(map(str, trial_targets))
     outputs = list(map(str, list(outputs)))
     f = open('./'+args.results+'/rte_report.txt', 'w')

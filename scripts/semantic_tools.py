@@ -389,7 +389,8 @@ def calculate_similarity(coq_scripts, dynamic_library_str):
             #    pre_similarities.append(pre_similarity)
         #word_similarity += max(pre_similarities)
         #In considering phrase, calculate maximum.(to do: consider which is better, maximum or average)
-        word_similarity += float(max(pre_similarities)/len(pre_similarities))
+        #word_similarity += float(sum(pre_similarities)/len(pre_similarities))
+        word_similarity += float(max(pre_similarities))
         axioms += 1
     if axioms > 0:
         word_similarity = word_similarity/axioms
